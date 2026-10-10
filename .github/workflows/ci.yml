@@ -2,9 +2,12 @@
 name: CI
 
 on:
+  # Website-only changes deploy via pages.yml and don't need the app build/test matrix.
   pull_request:
+    paths-ignore: ['website/**', '.github/workflows/pages.yml']
   push:
     branches: [main]
+    paths-ignore: ['website/**', '.github/workflows/pages.yml']
 
 concurrency:
   group: ci-${{ github.ref }}

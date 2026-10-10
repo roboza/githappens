@@ -145,6 +145,7 @@ services/cloud        self-hostable GitHappens Cloud server (spec 14)
 services/oauth-broker OAuth code exchange for providers that need a client secret (spec 10)
 test/fixtures         deterministic fixture repo generators (spec 15 §7.2)
 specs                 product & engineering specs
+website               githappens.dev static site, deployed to GitHub Pages by .github/workflows/pages.yml
 ```
 
 ## Phase 0 deliverables (spec 15 §8)
