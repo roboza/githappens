@@ -1,0 +1,256 @@
+/* status bar buttons */
+.sbButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+.sbButton:hover {
+  background: var(--kl-hover-row);
+  color: var(--kl-text-normal);
+}
+
+.bellWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.unread {
+  min-width: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--kl-red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.lastError {
+  color: var(--kl-red);
+  max-width: 260px;
+}
+
+.lastErrorText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* notification center popover */
+.center {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(480px, calc(100vh - 120px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: 8px;
+  background: var(--kl-panel__bg1);
+  box-shadow: var(--kl-shadow);
+  color: var(--kl-text-normal);
+  z-index: 1001;
+  white-space: normal;
+}
+
+.centerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--kl-panel-border);
+  font-size: 12px;
+}
+
+.centerList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+}
+
+.item {
+  padding: 8px 12px;
+  border-left: 3px solid var(--kl-blue);
+  border-bottom: 1px solid var(--kl-panel-border);
+  font-size: 12px;
+}
+
+.item.success {
+  border-left-color: var(--kl-green);
+}
+.item.warning {
+  border-left-color: var(--kl-orange);
+}
+.item.error {
+  border-left-color: var(--kl-red);
+}
+
+.itemUnread {
+  background: var(--kl-hover-row);
+}
+
+.itemHead {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.itemTitle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.itemCount {
+  margin-left: 6px;
+  color: var(--kl-text-secondary);
+  font-weight: 400;
+}
+
+.itemTime {
+  flex: none;
+  color: var(--kl-text-secondary);
+}
+
+.itemBody {
+  margin: 2px 0 0;
+  color: var(--kl-text-secondary);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  max-height: 6em;
+  overflow: hidden;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px 12px;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.linkBtn {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--kl-link-color);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* details modal */
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.details h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.detailsBody {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.cmdRow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cmd {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--kl-input__bg);
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.entry {
+  border: 1px solid var(--kl-panel-border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.entryHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--kl-panel__bg1);
+  font-size: 12px;
+}
+
+.entryHead code {
+  font-family: var(--kl-font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ok {
+  flex: none;
+  color: var(--kl-green);
+}
+.bad {
+  flex: none;
+  color: var(--kl-red);
+}
+
+.output {
+  margin: 0;
+  padding: 8px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--kl-input__bg);
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* commit composer identity notice */
+.identityNotice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--kl-panel-border);
+  border-left: 3px solid var(--kl-orange);
+  background: var(--kl-panel__bg1);
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.identityNotice strong {
+  color: var(--kl-text-normal);
+}

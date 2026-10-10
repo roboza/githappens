@@ -1,0 +1,55 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.menu {
+  position: fixed;
+  min-width: 200px;
+  max-width: 360px;
+  padding: 4px;
+  background: var(--kl-panel__bg1);
+  border: 1px solid var(--kl-default-border);
+  border-radius: 8px;
+  box-shadow: var(--kl-shadow);
+  outline: none;
+}
+
+.item {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  padding: 5px 10px;
+  text-align: left;
+  color: var(--kl-text-normal);
+}
+
+.item:hover:not(:disabled),
+.active:not(:disabled) {
+  background: var(--kl-selected-row);
+}
+
+.item:disabled {
+  color: var(--kl-text-disabled);
+  opacity: 1;
+}
+
+.danger {
+  color: var(--kl-red);
+}
+
+.shortcut {
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--kl-panel-border);
+}

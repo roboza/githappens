@@ -1,0 +1,526 @@
+.view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--kl-panel__bg0);
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--kl-panel-border);
+  background: var(--kl-panel__bg1);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  direction: rtl;
+  text-align: left;
+}
+
+.stats {
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.plus {
+  color: var(--kl-added);
+}
+.minus {
+  color: var(--kl-deleted);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  white-space: nowrap;
+}
+
+.segmented {
+  display: flex;
+}
+
+.segmented button {
+  padding: 3px 10px;
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.segmented button + button {
+  margin-left: -1px;
+}
+
+.segmented button:first-child {
+  border-radius: 5px 0 0 5px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 5px 5px 0;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--kl-selected-row);
+  color: var(--kl-text-accent);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.message {
+  margin: 0;
+  padding: 24px;
+  color: var(--kl-text-secondary);
+}
+
+.hunks {
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  line-height: 20px;
+  padding-bottom: 24px;
+  user-select: text;
+}
+
+.hunk {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.hunkHeader {
+  padding: 2px 12px;
+  color: var(--kl-text-secondary);
+  background: var(--kl-panel__bg1);
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 48px 48px 18px 1fr;
+}
+
+.ln {
+  padding-right: 8px;
+  text-align: right;
+  color: var(--kl-text-disabled);
+  user-select: none;
+}
+
+.sign {
+  text-align: center;
+  user-select: none;
+  color: var(--kl-text-secondary);
+}
+
+.code {
+  white-space: var(--kl-code-wrap, pre-wrap);
+  overflow-wrap: anywhere;
+  tab-size: 4;
+  padding-right: 12px;
+}
+
+.add {
+  background: var(--kl-diff-added__bg);
+}
+
+.del {
+  background: var(--kl-diff-deleted__bg);
+}
+
+.nonewline {
+  color: var(--kl-text-disabled);
+  font-style: italic;
+}
+
+.images {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+}
+
+.images figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.images figcaption {
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.images img {
+  max-width: 100%;
+  max-height: 60vh;
+  background: repeating-conic-gradient(#8884 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+}
+
+/* ---- staging (spec 06 §4.3) ---- */
+.stageFile {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.hunkHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hunkTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hunkActions {
+  display: flex;
+  gap: 6px;
+  font-family: var(--kl-font-ui);
+}
+
+.hunkActions button {
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.danger {
+  color: var(--kl-red);
+}
+
+.selectable {
+  cursor: pointer;
+}
+
+.selectable:hover .ln {
+  color: var(--kl-text-normal);
+}
+
+.selectedLine {
+  box-shadow: inset 4px 0 0 var(--kl-text-accent);
+  filter: brightness(1.08);
+}
+
+.selectedLine .sign {
+  color: var(--kl-text-accent);
+  font-weight: 700;
+}
+
+.selectionBar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--kl-panel__bg1);
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.selectionBar span {
+  margin-right: auto;
+  color: var(--kl-text-secondary);
+}
+
+.selectionBar button {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+/* ---- spec 07 diff viewer ---- */
+.toolbar + .toolbar {
+  padding-top: 4px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.toolbar select {
+  font-size: 12px;
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.iconBtn[aria-pressed='true'] {
+  background: var(--kl-selected-row);
+  color: var(--kl-text-accent);
+}
+
+.navGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.counter {
+  min-width: 42px;
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  text-align: center;
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.banner {
+  padding: 5px 12px;
+  font-size: 12px;
+  background: var(--kl-panel__bg1);
+  border-bottom: 1px solid var(--kl-panel-border);
+  color: var(--kl-text-secondary);
+}
+
+.banner button {
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.bannerWarn {
+  color: var(--kl-orange);
+}
+
+.noLineNumbers .line {
+  grid-template-columns: 0 0 18px 1fr;
+}
+
+.noLineNumbers .ln {
+  visibility: hidden;
+}
+
+.currentChange {
+  box-shadow: inset 3px 0 0 var(--kl-text-accent);
+}
+
+.word {
+  color: inherit;
+  border-radius: 2px;
+}
+
+.add .word {
+  background: var(--kl-diff-added-word__bg, color-mix(in srgb, var(--kl-added) 35%, transparent));
+}
+
+.del .word {
+  background: var(--kl-diff-deleted-word__bg, color-mix(in srgb, var(--kl-deleted) 35%, transparent));
+}
+
+.ws,
+.eol {
+  color: var(--kl-text-disabled);
+}
+
+.expandBar {
+  display: block;
+  width: 100%;
+  padding: 1px 12px;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--kl-panel-border);
+  background: var(--kl-panel__bg1);
+  color: var(--kl-text-secondary);
+  font-family: var(--kl-font-ui);
+  font-size: 11px;
+  text-align: left;
+}
+
+.expandBar:hover {
+  color: var(--kl-text-accent);
+}
+
+.combinedLine {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+}
+
+.monacoWrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.monacoFill {
+  flex: 1;
+  min-height: 0;
+}
+
+.card {
+  margin: 24px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: 6px;
+  background: var(--kl-panel__bg1);
+  font-size: 13px;
+}
+
+.muted {
+  color: var(--kl-text-secondary);
+}
+
+.checker {
+  background: repeating-conic-gradient(#8884 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+}
+
+.imageDiff {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+
+.imageDiff .images {
+  width: 100%;
+  padding: 0;
+}
+
+.overlayWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.overlay {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.overlay img {
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.overlayTop {
+  position: absolute;
+  inset: 0;
+}
+
+.swipeLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--kl-text-accent);
+  pointer-events: none;
+}
+
+.diffCanvas {
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.submodule .commitList {
+  margin: 0;
+  padding: 8px 24px;
+  list-style: none;
+  font-size: 12px;
+}
+
+.submodule .commitList li {
+  padding: 2px 0;
+}
+
+.compareTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.compareBody {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 30%) 1fr;
+}
+
+.compareList {
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid var(--kl-panel-border);
+}
+
+.compareDiff {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* split (side-by-side) hunk view for line staging (spec 06 §4.4) */
+.splitRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.splitCell {
+  display: grid;
+  grid-template-columns: 48px 18px 1fr;
+  min-width: 0;
+}
+
+.splitCell + .splitCell {
+  border-left: 1px solid var(--kl-panel-border);
+}
+
+.splitEmpty {
+  background: var(--kl-panel__bg1);
+}
+
+.noEol {
+  margin-left: 4px;
+  color: var(--kl-text-disabled);
+  user-select: none;
+}

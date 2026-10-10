@@ -1,0 +1,131 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kl-space-3);
+  margin-top: var(--kl-space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--kl-space-2);
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--kl-text-normal);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.tests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kl-space-2);
+}
+
+.result {
+  margin: 0;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.resultError {
+  margin: 0;
+  font-size: 12px;
+  color: var(--kl-red);
+}
+
+.group {
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+  overflow: hidden;
+}
+
+.groupTitle {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kl-text-secondary);
+  background: var(--kl-panel);
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.tool {
+  display: grid;
+  grid-template-columns: 10px minmax(110px, 160px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--kl-space-2);
+  padding: 5px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.tool:last-child {
+  border-bottom: none;
+}
+
+.tool:hover {
+  background: var(--kl-hover-row);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kl-text-disabled);
+}
+
+.found {
+  background: var(--kl-green);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--kl-text-normal);
+}
+
+.current {
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--kl-text-accent);
+}
+
+.path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.missing {
+  font-size: 11px;
+  color: var(--kl-text-disabled);
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.actions button {
+  padding: 1px 8px;
+  font-size: 11px;
+}

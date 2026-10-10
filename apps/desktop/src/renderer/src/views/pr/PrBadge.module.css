@@ -1,0 +1,43 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  background: var(--kl-panel__bg0);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.badge:hover {
+  background: var(--kl-hover-row);
+}
+
+.badge:focus-visible {
+  outline: 1px solid var(--kl-text-accent);
+  outline-offset: 1px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 1px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* merged / closed PRs (kept for 7 days): quieter dashed outline */
+.done {
+  border-style: dashed;
+}

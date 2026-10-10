@@ -1,0 +1,53 @@
+/* Left-panel TEAM section (spec 14 §4.4) */
+
+.member {
+  padding-left: 25px;
+}
+
+.branch {
+  padding-left: 49px;
+  color: var(--kl-text-secondary);
+}
+
+.files {
+  flex: none;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.when {
+  flex: none;
+  font-size: 11px;
+  color: var(--kl-text-disabled);
+}
+
+.prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 10px 8px 32px;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.promptBtn {
+  align-self: flex-start;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-btn-bg);
+  color: var(--kl-text-normal);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.promptBtn:hover {
+  background: var(--kl-btn-bg-hover);
+}
+
+.error {
+  color: var(--kl-orange);
+}

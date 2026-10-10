@@ -1,0 +1,38 @@
+.focus {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.key {
+  flex: none;
+  color: var(--kl-text-secondary);
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+}
+
+.meta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}

@@ -1,0 +1,28 @@
+.splitter {
+  flex: 0 0 5px;
+  margin: 0 -2px;
+  z-index: 5;
+  cursor: col-resize;
+  position: relative;
+}
+
+.splitter::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: var(--kl-panel-border);
+}
+
+.splitter:hover::after,
+.splitter:focus-visible::after {
+  background: var(--kl-text-accent);
+  width: 2px;
+  left: 1px;
+}
+
+.splitter:focus-visible {
+  outline: none;
+}

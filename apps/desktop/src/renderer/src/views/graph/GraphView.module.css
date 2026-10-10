@@ -1,0 +1,618 @@
+.view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--kl-panel__bg0);
+}
+
+.state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--kl-text-secondary);
+}
+
+.muted {
+  margin: 0;
+  color: var(--kl-text-disabled);
+  user-select: text;
+}
+
+/* ---- search strip ---- */
+.searchBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.searchBox {
+  flex: 1;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: var(--kl-input__bg);
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  color: var(--kl-text-secondary);
+}
+
+.searchBox:focus-within {
+  border-color: var(--kl-text-accent);
+}
+
+.searchBox input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  outline: none;
+}
+
+.searchCount {
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  white-space: nowrap;
+}
+
+.searchError {
+  font-size: 12px;
+  color: var(--kl-red);
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.iconBtn:hover,
+.iconBtn[aria-pressed='true'] {
+  color: var(--kl-text-normal);
+  background: var(--kl-hover-row);
+}
+
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--kl-link-color);
+  font-size: 12px;
+}
+
+/* ---- columns ---- */
+.header {
+  position: relative;
+  flex: none;
+  display: flex;
+  height: 26px;
+  align-items: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--kl-text-secondary);
+  border-bottom: 1px solid var(--kl-panel-border);
+  background: var(--kl-panel__bg1);
+  /* Columns are fitted to the viewport; never paint past the center into a side panel. */
+  overflow: hidden;
+}
+
+.headerCell {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: grab;
+  user-select: none;
+}
+
+.headerDragging {
+  opacity: 0.5;
+}
+
+.headerTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.resizeHandle:hover {
+  background: var(--kl-text-accent);
+}
+
+.headerGear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: none;
+  background: var(--kl-panel__bg1);
+  color: var(--kl-text-secondary);
+}
+
+.headerGear:hover {
+  color: var(--kl-text-normal);
+}
+
+.dropIndicator {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--kl-text-accent);
+  pointer-events: none;
+}
+
+.progress {
+  flex: none;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--kl-text-accent) 40%,
+    var(--kl-text-accent) 60%,
+    transparent
+  );
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: klGraphProgress 1s linear infinite;
+}
+
+@keyframes klGraphProgress {
+  from {
+    background-position: -50% 0;
+  }
+  to {
+    background-position: 150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress {
+    animation: none;
+    background: var(--kl-text-accent);
+    opacity: 0.5;
+  }
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  outline: none;
+}
+
+.viewport {
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  /*
+   * Fixed height + full width: nothing inside a row affects layout or paint outside it. Rows are
+   * positioned with top inside the rows layer (no per-row transform), and only change when recycled.
+   */
+  contain: strict;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.row:hover {
+  background: var(--kl-hover-row);
+}
+
+.selected,
+.selected:hover {
+  background: var(--kl-selected-row);
+}
+
+.match {
+  box-shadow: inset 3px 0 0 var(--kl-yellow);
+  background: color-mix(in srgb, var(--kl-yellow) 10%, transparent);
+}
+
+.activeMatch {
+  background: color-mix(in srgb, var(--kl-yellow) 22%, transparent);
+}
+
+.dim {
+  opacity: 0.35;
+}
+
+.refsCell {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  overflow: hidden;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 150px;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--kl-text-selected);
+}
+
+.headPill {
+  font-weight: 700;
+}
+
+.pillLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more {
+  flex: none;
+  padding: 0 5px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  background: var(--kl-btn-bg);
+  color: var(--kl-text-secondary);
+}
+
+.more:hover {
+  color: var(--kl-text-normal);
+}
+
+/* hover hide / solo icons at the pill's right end (spec 04 §4.5) */
+.pillActions {
+  display: none;
+  align-items: center;
+  gap: 1px;
+  margin-left: 2px;
+}
+
+.pill:hover .pillActions,
+.pillActionsOn {
+  display: inline-flex;
+}
+
+.pillAction {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.pillAction:hover {
+  background: var(--kl-hover-row);
+  color: var(--kl-text-normal);
+}
+
+.soloOn {
+  color: var(--kl-orange);
+}
+
+.ghostHidden {
+  border-style: dashed;
+  border-color: var(--kl-default-border);
+  color: var(--kl-text-disabled);
+  background: transparent;
+}
+
+.ghostCount {
+  font-size: 10px;
+}
+
+.ghostBranch {
+  opacity: 0.4;
+  border-color: var(--kl-default-border);
+  color: var(--kl-text-secondary);
+  background: transparent;
+}
+
+.popover {
+  position: fixed;
+  z-index: 50;
+  min-width: 200px;
+  max-width: 320px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+}
+
+.popoverEntry {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.popoverEntry:hover {
+  background: var(--kl-hover-row);
+}
+
+.popoverEntry > .pillLabel {
+  flex: 1;
+}
+
+.popoverHidden {
+  color: var(--kl-text-disabled);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 60;
+  max-width: 320px;
+  padding: 6px 8px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  pointer-events: none;
+}
+
+.tooltipTitle {
+  color: var(--kl-text-normal);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tooltipRefs {
+  color: var(--kl-text-accent);
+}
+
+.laneOverflow {
+  position: absolute;
+  top: 0;
+  z-index: 3;
+  width: 14px;
+  pointer-events: none;
+}
+
+.shaCell {
+  cursor: copy;
+}
+
+.focused {
+  box-shadow: inset 2px 0 0 var(--kl-text-accent);
+}
+
+/* loading skeleton (spec 04 §4.14) */
+.skeleton {
+  flex: 1;
+  padding-top: 32px;
+  overflow: hidden;
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 28px;
+}
+
+.skeletonDot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--kl-hover-row);
+}
+
+.skeletonBar {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--kl-hover-row);
+}
+
+/* error state with Retry (spec 04 §4.14) */
+.errorCard {
+  max-width: 560px;
+  padding: 14px 16px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+}
+
+.errorTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--kl-text-normal);
+  font-weight: 600;
+}
+
+.errorText {
+  max-height: 160px;
+  margin: 0 0 10px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  color: var(--kl-text-secondary);
+  user-select: text;
+}
+
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-btn-bg);
+  color: var(--kl-text-normal);
+}
+
+.footerError {
+  color: var(--kl-orange);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.message > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stashMsg {
+  color: var(--kl-text-secondary);
+  font-style: italic;
+}
+
+.wip {
+  color: var(--kl-text-secondary);
+  font-style: italic;
+  display: inline-flex;
+  gap: 10px;
+}
+
+.wipDraft {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--kl-text-normal);
+}
+
+.wipCounts {
+  display: inline-flex;
+  gap: 8px;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.modified {
+  color: var(--kl-modified);
+}
+.added {
+  color: var(--kl-added);
+}
+.deleted {
+  color: var(--kl-deleted);
+}
+
+.conflict {
+  color: var(--kl-orange);
+  font-weight: 600;
+}
+
+.cell {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  overflow: hidden;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 10px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+  border-top: 1px solid var(--kl-panel-border);
+}
+
+.loading {
+  color: var(--kl-text-accent);
+}
+
+/* drag & drop target highlight (spec 04 §4.11) */
+.dropTarget {
+  box-shadow: inset 0 0 0 2px var(--kl-text-accent);
+  background: var(--kl-selected-row);
+}
+
+/*
+ * Pooled rows layer (spec 04 §7.10): only its transform follows the scroll position, on its own
+ * compositor layer; the opaque background keeps subpixel text antialiasing.
+ */
+.rows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  will-change: transform;
+  background: var(--kl-panel__bg0);
+}

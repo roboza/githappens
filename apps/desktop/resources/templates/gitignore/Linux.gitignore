@@ -1,0 +1,13 @@
+*~
+
+# Temporary files created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# KDE directory preferences
+.directory
+
+# Linux trash folder
+.Trash-*
+
+# NFS
+.nfs*

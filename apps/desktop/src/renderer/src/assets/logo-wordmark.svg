@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="196" height="40" viewBox="0 0 196 40">
+  <title>githappens</title>
+  <g transform="translate(-6 -2) scale(0.75)">
+    <g fill="none" stroke="#c8f031" stroke-width="6" stroke-linecap="round">
+      <path d="M24 13v32"/>
+      <path d="M24 38c0-12 16-8 16-19"/>
+    </g>
+    <circle cx="40" cy="18" r="7.5" fill="#ff5a5f"/>
+    <circle cx="24" cy="46" r="7.5" fill="#2fd46b"/>
+  </g>
+  <text x="40" y="28" font-family="Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="-0.5"><tspan fill="#f4f4f2">git</tspan><tspan fill="#c8f031">happens</tspan></text>
+</svg>

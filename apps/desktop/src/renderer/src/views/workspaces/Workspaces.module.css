@@ -1,0 +1,593 @@
+/* Workspaces (spec 11 §4.1): sidebar section, new-workspace dialog, workspace overview. */
+
+.muted {
+  color: var(--kl-text-secondary);
+}
+
+.good {
+  color: var(--kl-green);
+}
+
+.warn {
+  color: var(--kl-orange);
+}
+
+.bad {
+  color: var(--kl-red);
+}
+
+.mono {
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+}
+
+.spin {
+  animation: ws-spin 0.9s linear infinite;
+}
+
+@keyframes ws-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 5px;
+  color: var(--kl-text-inverse);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.iconBtn:hover {
+  color: var(--kl-text-normal);
+  background: var(--kl-hover-row);
+}
+
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: var(--kl-link-color);
+  font-size: 12px;
+}
+
+.linkBtn:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+/* ---- sidebar ---- */
+
+.sidebarSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Own row under the header so it never squeezes the title in a narrow sidebar. */
+.cloudBtn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  margin: 2px 0 4px;
+  font-size: 12px;
+}
+
+.sidebarHeader h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kl-text-secondary);
+}
+
+.sidebarEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.sidebarEmpty p {
+  margin: 0 0 4px;
+}
+
+.wsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wsItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--kl-radius);
+  cursor: pointer;
+  border-top: 2px solid transparent;
+}
+
+.wsItem:hover,
+.wsItem:focus-visible {
+  background: var(--kl-hover-row);
+  outline: none;
+}
+
+.wsItem.selected {
+  background: var(--kl-selected-row);
+  color: var(--kl-text-selected);
+}
+
+.hiddenWs {
+  opacity: 0.55;
+}
+
+.dropTarget {
+  border-top-color: var(--kl-text-accent);
+}
+
+.wsName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wsCount {
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+/* ---- new workspace dialog ---- */
+
+.kindCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: 8px;
+  background: var(--kl-panel__bg0);
+}
+
+.kindCard:hover:not(:disabled) {
+  background: var(--kl-hover-row);
+}
+
+.kindCard > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.kindCard strong {
+  font-size: 13px;
+}
+
+.kindIcon {
+  color: var(--kl-text-accent);
+  padding-top: 2px;
+}
+
+.folderField {
+  display: flex;
+  gap: 6px;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.colors {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.colorDot {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+
+.colorOn {
+  border-color: var(--kl-text-normal);
+}
+
+.pickerBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pickerBar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pickList {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  height: 240px;
+  overflow: auto;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg0);
+}
+
+.pickList > li.muted {
+  padding: 8px 10px;
+}
+
+.pickRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.pickRow:hover {
+  background: var(--kl-hover-row);
+}
+
+.pickName {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pickPath {
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- workspace view ---- */
+
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.wsTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: text;
+}
+
+.nameInput {
+  font-size: 18px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.description {
+  margin: 2px 0 0;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kindBadge {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--kl-panel-border);
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+.headerButtons,
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerButtons button,
+.toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--kl-panel__bg1);
+  font-size: 12px;
+}
+
+.chipWarn {
+  color: var(--kl-orange);
+}
+
+.chipLink {
+  border: none;
+  color: var(--kl-link-color);
+  cursor: pointer;
+}
+
+.chipLink:hover {
+  background: var(--kl-hover-row);
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.tab {
+  padding: 6px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--kl-text-normal);
+  border-bottom-color: var(--kl-text-accent);
+}
+
+.tabBody {
+  min-height: 120px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.emptyState button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: 8px;
+  background: var(--kl-panel__bg0);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  background: var(--kl-panel__bg1);
+  border-bottom: 1px solid var(--kl-panel-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 6px 8px;
+  border-top: 1px solid var(--kl-panel-border);
+  vertical-align: middle;
+}
+
+.checkCol {
+  width: 28px;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--kl-hover-row);
+}
+
+.rowChecked {
+  background: var(--kl-selected-row);
+}
+
+.nameCell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 200px;
+  max-width: 420px;
+}
+
+.expander {
+  display: grid;
+  place-items: center;
+  color: var(--kl-text-secondary);
+}
+
+.repoMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.repoName {
+  font-weight: 600;
+}
+
+.providerTag {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--kl-panel__bg1);
+  color: var(--kl-text-secondary);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.repoPath {
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notCloned {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--kl-orange);
+  font-size: 11px;
+}
+
+.inlineBtn {
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.ab {
+  white-space: nowrap;
+}
+
+.ab span {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+}
+
+.behind {
+  color: var(--kl-orange);
+}
+
+.wip {
+  color: var(--kl-modified);
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 260px;
+}
+
+.stateText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.detailRow td {
+  background: var(--kl-panel__bg1);
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  font-size: 12px;
+}
+
+.details h4 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kl-text-secondary);
+}
+
+.details ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.details li {
+  padding: 1px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current {
+  font-weight: 600;
+}
+
+.matrix td,
+.matrix th {
+  text-align: center;
+}
+
+.matrix td:first-child,
+.matrix th:first-child {
+  text-align: left;
+}

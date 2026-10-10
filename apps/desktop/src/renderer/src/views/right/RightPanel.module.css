@@ -1,0 +1,303 @@
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--kl-panel__bg0);
+}
+
+.placeholder {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--kl-text-secondary);
+  text-align: center;
+}
+
+.header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--kl-panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.label {
+  color: var(--kl-text-secondary);
+}
+
+.sha,
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--kl-default-border);
+  background: transparent;
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+}
+
+.link {
+  color: var(--kl-link-color);
+  border-color: transparent;
+}
+
+.subject {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--kl-font-ui);
+  color: var(--kl-text-secondary);
+  user-select: text;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.personName {
+  font-weight: 600;
+}
+
+.personMeta {
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.groupTitle {
+  margin: 0;
+  padding: 8px 14px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--kl-text-secondary);
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.filesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.segmented {
+  display: flex;
+}
+
+.segmented button {
+  display: grid;
+  place-items: center;
+  padding: 3px 6px;
+  border-radius: 0;
+}
+
+.segmented button:first-child {
+  border-radius: 5px 0 0 5px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 5px 5px 0;
+  margin-left: -1px;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--kl-selected-row);
+  color: var(--kl-text-accent);
+}
+
+.fileList {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 8px;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 3px 14px;
+  text-align: left;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.fileRow:hover {
+  background: var(--kl-hover-row);
+}
+
+.activeFile {
+  background: var(--kl-selected-row);
+}
+
+.fileRow svg {
+  flex: none;
+  color: var(--kl-text-secondary);
+}
+
+.status {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 3px;
+}
+
+.added {
+  color: var(--kl-added);
+}
+.modified {
+  color: var(--kl-modified);
+}
+.deleted {
+  color: var(--kl-deleted);
+}
+.renamed {
+  color: var(--kl-renamed);
+}
+
+.fileName {
+  /* Shrinks (ellipsis) before row badges / hover actions are pushed out of a narrow panel. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileDir {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--kl-text-disabled);
+  font-size: 12px;
+  direction: rtl;
+  text-align: left;
+}
+
+.stat {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+}
+
+.plus {
+  color: var(--kl-added);
+}
+.minus {
+  color: var(--kl-deleted);
+}
+
+/* signature badge (spec 06 §6.8) */
+.sigBadge {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  border: 1px solid currentColor;
+}
+.good {
+  color: var(--kl-green);
+}
+.warn {
+  color: var(--kl-orange);
+}
+.bad {
+  color: var(--kl-red);
+}
+
+/* ---- spec 07 commit panel ---- */
+.filesToolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 6px;
+}
+
+.fileFilter {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  white-space: nowrap;
+}
+
+.statusSummary,
+.truncated,
+.parentNote {
+  margin: 0;
+  padding: 0 14px 6px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.unchangedFile {
+  opacity: 0.6;
+}
+
+.parentBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.parentBar select {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.fileList:focus-visible {
+  outline: 1px solid var(--kl-text-accent);
+  outline-offset: -1px;
+}

@@ -1,0 +1,47 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  margin: 2px 12px 4px 25px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.main,
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 20px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action {
+  flex: none;
+  border-left: 1px solid currentColor;
+  color: var(--kl-text-secondary);
+}
+
+.main:hover,
+.action:hover {
+  background: var(--kl-hover-row);
+}
+
+.action:hover {
+  color: var(--kl-text-normal);
+}

@@ -1,0 +1,124 @@
+.bar {
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 10px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+  background: var(--kl-panel__bg0);
+  border-top: 1px solid var(--kl-panel-border);
+}
+
+.path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.launchpad:empty {
+  display: none;
+}
+
+.op {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--kl-text-normal);
+  white-space: nowrap;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+  color: var(--kl-text-accent);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.queued {
+  color: var(--kl-text-secondary);
+}
+
+.cancel {
+  display: grid;
+  place-items: center;
+  padding: 1px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.progress {
+  width: 120px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--kl-hover-row);
+  overflow: hidden;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  background: var(--kl-text-accent);
+  transition: width 0.2s;
+}
+
+.sbButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+.sbButton:hover {
+  background: var(--kl-hover-row);
+  color: var(--kl-text-normal);
+}
+
+.sbButtonOn {
+  color: var(--kl-text-accent);
+}
+
+.zoom {
+  height: 18px;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+.zoom:hover {
+  background: var(--kl-hover-row);
+}
+
+.versions {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watchWarning {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--kl-orange);
+}

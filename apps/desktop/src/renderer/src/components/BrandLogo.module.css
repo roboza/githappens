@@ -1,0 +1,27 @@
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mark {
+  display: block;
+  flex: none;
+}
+
+.git {
+  color: var(--kl-text-normal);
+}
+
+/* Brand lime (#c8f031); darkened on light themes for contrast. */
+.happens {
+  color: #c8f031;
+}
+
+:global(:root[data-theme='light']) .happens {
+  color: #5c7a00;
+}

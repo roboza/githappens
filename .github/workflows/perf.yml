@@ -1,0 +1,76 @@
+# Spec 15 §7 "Perf" (nightly): git engine benchmarks (spec 02 §6.16 / §9) and graph/renderer perf e2e
+# (spec 04 §9). Thresholds are enforced (BENCH_STRICT / GH_PERF_STRICT); results are uploaded as JSON.
+# See docs/performance.md.
+name: Perf (nightly)
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: Skip the 1M-commit repo and the graph layout bench
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf
+  cancel-in-progress: false
+
+jobs:
+  perf:
+    name: benchmarks (ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Configure git identity for tests
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+
+      # Generated repos (200k / 1M commits, 100k files, 5k branches) are deterministic: cache them
+      # keyed on the generator sources. The bench re-generates anything whose stamp does not match.
+      - name: Cache perf fixtures
+        uses: actions/cache@v4
+        with:
+          path: test/fixtures/.repos/bench
+          key: perf-fixtures-${{ runner.os }}-${{ hashFiles('test/fixtures/src/**') }}
+
+      - name: Git engine benchmarks
+        id: bench
+        env:
+          BENCH_STRICT: '1'
+        run: pnpm bench ${{ inputs.quick && '--quick' || '' }}
+
+      - name: Build
+        if: always()
+        run: pnpm build
+
+      - name: Graph / renderer perf e2e (virtual display)
+        if: always()
+        env:
+          GH_PERF: '1'
+          GH_PERF_STRICT: '1'
+        run: xvfb-run --auto-servernum pnpm --filter @githappens/desktop exec playwright test e2e/perf.spec.ts --workers=1
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-results-${{ github.run_number }}
+          path: |
+            bench-results/
+            apps/desktop/test-results/
+          if-no-files-found: warn
+          retention-days: 30

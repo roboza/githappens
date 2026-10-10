@@ -1,0 +1,266 @@
+.view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--kl-panel__bg0);
+  min-width: 0;
+}
+
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--kl-panel-border);
+  background: var(--kl-panel__bg1);
+}
+
+.header button {
+  padding: 3px 12px;
+  font-size: 12px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  white-space: nowrap;
+}
+
+.message {
+  margin: 0;
+  padding: 24px 16px;
+  color: var(--kl-text-secondary);
+}
+
+.help {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.help kbd {
+  font-family: var(--kl-font-mono);
+  font-size: 10px;
+  padding: 0 3px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: 3px;
+}
+
+.error {
+  margin: 0 12px 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--kl-red);
+  background: var(--kl-danger-row);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0 16px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 12px;
+  font-size: 12px;
+  min-width: 0;
+  cursor: default;
+  border-top: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+}
+
+.row:hover {
+  background: var(--kl-hover-row);
+}
+
+.row:focus-visible {
+  outline: none;
+}
+
+.focused {
+  background: var(--kl-selected-row);
+}
+
+.grip {
+  display: grid;
+  place-items: center;
+  color: var(--kl-text-disabled);
+  cursor: grab;
+}
+
+.action {
+  flex: none;
+  width: 84px;
+  padding: 1px 4px;
+  font-size: 12px;
+}
+
+.a_pick {
+  color: var(--kl-text-normal);
+}
+.a_reword {
+  color: var(--kl-blue);
+}
+.a_edit {
+  color: var(--kl-purple);
+}
+.a_squash,
+.a_fixup {
+  color: var(--kl-yellow);
+}
+.a_drop {
+  color: var(--kl-red);
+}
+
+.sha {
+  flex: none;
+  font-family: var(--kl-font-mono);
+  color: var(--kl-text-secondary);
+}
+
+.summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropped .summary,
+.dropped .sha {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.target {
+  box-shadow: inset 3px 0 0 var(--kl-yellow);
+}
+
+.folded {
+  padding-left: 36px;
+  box-shadow: inset 3px 0 0 var(--kl-yellow);
+}
+
+.folded::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 50%;
+  width: 10px;
+  border-left: 1px solid var(--kl-yellow);
+  border-bottom: 1px solid var(--kl-yellow);
+}
+
+.into {
+  flex: none;
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+  color: var(--kl-yellow);
+}
+
+.dragging {
+  opacity: 0.4;
+}
+
+.dropBefore {
+  border-top-color: var(--kl-text-accent);
+}
+
+.dropAfter {
+  border-bottom-color: var(--kl-text-accent);
+}
+
+.small {
+  flex: none;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 2px 4px;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 12px 8px 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+}
+
+.editor textarea {
+  resize: vertical;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 6px;
+  color: var(--kl-text-normal);
+  background: var(--kl-input__bg);
+  border: 1px solid var(--kl-default-border);
+  border-radius: 4px;
+}
+
+.editorTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.count,
+.over {
+  margin-left: auto;
+  font-weight: normal;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.over {
+  color: var(--kl-orange);
+}
+
+.editorButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.editorButtons button {
+  padding: 3px 10px;
+  font-size: 12px;
+}

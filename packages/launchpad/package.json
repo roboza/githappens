@@ -1,0 +1,17 @@
+{
+  "name": "@githappens/launchpad",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Launchpad model: classification, filtering, search, snooze and summaries (spec 11 §5.2-5.3). Pure.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@githappens/providers": "workspace:*"
+  }
+}

@@ -1,0 +1,33 @@
+#!/bin/sh
+# GitHappens command-line launcher (installed by the deb/rpm package): githappens [.|<path>] [-p|--path <path>] [--path=<path>]
+self=$(readlink -f "$0" 2>/dev/null || printf '%s' "$0")
+exe="$(cd "$(dirname "$self")/../.." && pwd)/githappens"
+abs() {
+  case "$1" in
+    /*) printf '%s' "$1" ;;
+    *) printf '%s/%s' "$(pwd)" "$1" ;;
+  esac
+}
+n=$#
+expect=0
+while [ "$n" -gt 0 ]; do
+  a=$1
+  shift
+  n=$((n - 1))
+  if [ "$expect" = 1 ]; then
+    a=$(abs "$a")
+    expect=0
+  else
+    case "$a" in
+      -p | --path) expect=1 ;;
+      --path=*) a="--path=$(abs "${a#--path=}")" ;;
+      -*) ;;
+      *) a=$(abs "$a") ;;
+    esac
+  fi
+  set -- "$@" "$a"
+done
+if [ -n "$GITHAPPENS_CLI_FOREGROUND" ]; then
+  exec "$exe" "$@"
+fi
+nohup "$exe" "$@" >/dev/null 2>&1 &

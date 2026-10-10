@@ -1,0 +1,258 @@
+.panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--kl-panel__bg0);
+}
+
+.toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.toolBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-btn-bg);
+  color: var(--kl-text-normal);
+  font-size: 12px;
+}
+
+.toolBtn:hover {
+  background: var(--kl-btn-bg-hover);
+}
+
+.error {
+  margin: 8px;
+  color: var(--kl-red);
+  font-size: 12px;
+}
+
+.groups {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+
+.group + .group {
+  border-top: 1px solid var(--kl-panel-border);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 5px 10px;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.groupName {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.branch {
+  color: var(--kl-text-normal);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder {
+  color: var(--kl-text-disabled);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wip {
+  flex: none;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--kl-orange);
+  color: var(--kl-text-inverse);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.iconBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: var(--kl-radius);
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.iconBtn:hover {
+  background: var(--kl-hover-row);
+  color: var(--kl-text-normal);
+}
+
+.empty,
+.muted {
+  padding: 2px 10px 8px 29px;
+  color: var(--kl-text-disabled);
+  font-size: 12px;
+}
+
+.card {
+  margin: 0 8px 6px 22px;
+  padding: 6px 8px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+  font-size: 12px;
+}
+
+.card:hover {
+  border-color: var(--kl-default-border);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kind {
+  flex: 1;
+  min-width: 0;
+  color: var(--kl-text-normal);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kind_claude {
+  color: var(--kl-orange);
+}
+
+.kind_codex {
+  color: var(--kl-teal);
+}
+
+.kind_copilot {
+  color: var(--kl-purple);
+}
+
+.kind_gemini {
+  color: var(--kl-blue);
+}
+
+.kind_custom {
+  color: var(--kl-text-secondary);
+}
+
+.pill {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.st_running {
+  color: var(--kl-green);
+}
+
+.st_waiting {
+  color: var(--kl-yellow);
+}
+
+.st_idle {
+  color: var(--kl-text-secondary);
+}
+
+.st_exited {
+  color: var(--kl-text-disabled);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot {
+    animation: none;
+  }
+}
+
+.meta {
+  display: flex;
+  gap: 4px;
+  margin-top: 3px;
+  color: var(--kl-text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sep {
+  flex: none;
+  color: var(--kl-text-disabled);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  background: transparent;
+  color: var(--kl-text-normal);
+  font-size: 11px;
+}
+
+.action:hover {
+  background: var(--kl-hover-row);
+}

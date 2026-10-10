@@ -1,0 +1,13 @@
+[
+  { "spdxId": "MIT", "name": "MIT License", "file": "MIT.txt" },
+  { "spdxId": "Apache-2.0", "name": "Apache License 2.0", "file": "Apache-2.0.txt" },
+  { "spdxId": "GPL-3.0", "name": "GNU General Public License v3.0", "file": "GPL-3.0.txt" },
+  { "spdxId": "BSD-2-Clause", "name": "BSD 2-Clause \"Simplified\" License", "file": "BSD-2-Clause.txt" },
+  {
+    "spdxId": "BSD-3-Clause",
+    "name": "BSD 3-Clause \"New\" or \"Revised\" License",
+    "file": "BSD-3-Clause.txt"
+  },
+  { "spdxId": "MPL-2.0", "name": "Mozilla Public License 2.0", "file": "MPL-2.0.txt" },
+  { "spdxId": "Unlicense", "name": "The Unlicense", "file": "Unlicense.txt" }
+]

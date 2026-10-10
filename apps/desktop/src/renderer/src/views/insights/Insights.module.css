@@ -1,0 +1,177 @@
+/* Insights (spec 14 §4.5): KPI tiles + hand-rolled SVG charts. */
+
+.dialog {
+  width: min(1180px, calc(100vw - 32px));
+  height: calc(100vh - 48px);
+  padding: 0;
+  border: 1px solid var(--kl-default-border);
+  border-radius: 12px;
+  background: var(--kl-panel__bg0);
+  color: var(--kl-text-normal);
+  box-shadow: var(--kl-shadow);
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kl-space-2);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.header h2 {
+  margin: 0 auto 0 0;
+  font-size: 15px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kl-space-3);
+  min-height: 0;
+  padding: 12px 16px 16px;
+  overflow: auto;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--kl-space-2);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+}
+
+.tileLabel {
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tileValue {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tileSub {
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: var(--kl-space-3);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+}
+
+.axis text,
+.axisText {
+  fill: var(--kl-text-secondary);
+  font-size: 10px;
+}
+
+.grid {
+  stroke: var(--kl-panel-border);
+  stroke-width: 1;
+}
+
+.bar {
+  fill: var(--kl-blue);
+}
+
+.bar:hover {
+  fill: var(--kl-text-accent);
+}
+
+.line {
+  fill: none;
+  stroke: var(--kl-blue);
+  stroke-width: 2;
+}
+
+.point {
+  fill: var(--kl-panel__bg0);
+  stroke: var(--kl-blue);
+  stroke-width: 2;
+}
+
+.muted {
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.error {
+  margin: 0;
+  color: var(--kl-red);
+  font-size: 12px;
+}
+
+.warn {
+  color: var(--kl-orange);
+}
+
+.repos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.repos label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.footnote {
+  color: var(--kl-text-secondary);
+  font-size: 11px;
+}
+
+.progress {
+  height: 3px;
+  background: var(--kl-blue);
+  transition: width 0.2s;
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@githappens/cloud",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GitHappens Cloud: optional self-hostable backend for sign-in, settings sync, Cloud Patches, orgs and team footprints (spec 14).",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/index.ts",
+    "dev": "node --disable-warning=ExperimentalWarning src/index.ts --dev",
+    "typecheck": "tsc -p tsconfig.json",
+    "openapi": "node --disable-warning=ExperimentalWarning scripts/gen-openapi.ts",
+    "load-test": "node --disable-warning=ExperimentalWarning scripts/load-test.ts",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@githappens/cloud-api": "workspace:*",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.23.1"
+  }
+}

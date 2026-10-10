@@ -1,0 +1,166 @@
+.details {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 140px);
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: 8px;
+  background: var(--kl-panel__bg0);
+}
+
+.detailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.detailsHeader h2 {
+  margin: 0;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 12px 0;
+  font-size: 12px;
+}
+
+.facts dt {
+  color: var(--kl-text-secondary);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.mono {
+  font-family: var(--kl-font-mono);
+}
+
+.muted {
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--kl-red);
+  font-size: 12px;
+}
+
+.readme {
+  border-top: 1px solid var(--kl-panel-border);
+  padding-top: 8px;
+}
+
+.readme h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--kl-text-secondary);
+}
+
+/* ---- clone / init dialogs ---- */
+
+.pathPreview {
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.pathBad {
+  color: var(--kl-red);
+}
+
+.pathWarn {
+  color: var(--kl-orange);
+  font-size: 12px;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 4px 10px;
+  border-radius: var(--kl-radius);
+  font-size: 12px;
+}
+
+.tabActive {
+  background: var(--kl-selected-row);
+  color: var(--kl-text-selected);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--kl-default-border);
+  font-size: 12px;
+}
+
+.chip button {
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+}
+
+.fieldset legend {
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.progressText {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}

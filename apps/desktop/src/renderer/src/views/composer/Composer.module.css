@@ -1,0 +1,232 @@
+.counter {
+  flex: none;
+  min-width: 40px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--kl-text-disabled);
+  font-variant-numeric: tabular-nums;
+}
+
+.warn {
+  color: var(--kl-orange);
+  font-weight: 600;
+}
+
+.over {
+  color: var(--kl-red);
+  font-weight: 600;
+}
+
+.notice {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: var(--kl-radius);
+  border: 1px solid var(--kl-orange);
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 0 6px;
+  border-radius: 3px;
+  border: 1px solid var(--kl-orange);
+  color: var(--kl-orange);
+  font-size: 11px;
+}
+
+.prefill {
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.addCoAuthor {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.coAuthors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 2px 0 8px;
+  border-radius: 10px;
+  background: var(--kl-selected-row);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.chip button {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: none;
+  background: transparent;
+}
+
+.coAuthorInput {
+  position: relative;
+  flex: 1;
+  min-width: 140px;
+}
+
+.coAuthorInput input {
+  width: 100%;
+  font-size: 12px;
+}
+
+.suggestions {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin: 0 0 2px;
+  padding: 2px 0;
+  list-style: none;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--kl-panel__bg1);
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 25%);
+  font-size: 12px;
+}
+
+.suggestions li {
+  padding: 3px 8px;
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeSuggestion {
+  background: var(--kl-selected-row);
+}
+
+.muted {
+  color: var(--kl-text-disabled);
+}
+
+.hookDrawer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  padding: 4px 6px;
+}
+
+.hookFailed {
+  border-color: var(--kl-red);
+}
+
+.hookBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--kl-red);
+}
+
+.hookBanner > span:first-child {
+  flex: 1;
+  min-width: 140px;
+}
+
+.hookActions {
+  display: flex;
+  gap: 4px;
+}
+
+.hookActions button {
+  padding: 1px 8px;
+  font-size: 12px;
+}
+
+.hookHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hookToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.hookOutput {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 6px;
+  background: var(--kl-input__bg);
+  border-radius: 3px;
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.linkBtn {
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--kl-link-color);
+  font-size: 12px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+.buttonRow {
+  display: flex;
+  gap: 4px;
+}
+
+.buttonRow > button:first-child {
+  flex: 1;
+}
+
+.moreBtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+}

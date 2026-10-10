@@ -1,0 +1,238 @@
+.layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: var(--kl-space-4);
+  min-height: 360px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-right: 1px solid var(--kl-panel-border);
+  padding-right: var(--kl-space-2);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--kl-text-normal);
+}
+
+.navItem:hover:not(:disabled) {
+  background: var(--kl-hover-row);
+}
+
+.navItemActive,
+.navItemActive:hover:not(:disabled) {
+  background: var(--kl-selected-row);
+}
+
+.navLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navCount {
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.status {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--kl-text-disabled);
+}
+
+.status[data-status='connected'] {
+  background: var(--kl-green);
+}
+.status[data-status='connecting'] {
+  background: var(--kl-blue);
+}
+.status[data-status='expired'] {
+  background: var(--kl-orange);
+}
+.status[data-status='error'] {
+  background: var(--kl-red);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kl-space-4);
+  min-width: 0;
+}
+
+.panel h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--kl-text-secondary);
+}
+
+.card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg1);
+}
+
+.cardMain {
+  min-width: 0;
+}
+
+.login {
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.scopes {
+  grid-column: 2 / 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scope {
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--kl-app__bg0);
+  border: 1px solid var(--kl-panel-border);
+}
+
+.warn {
+  grid-column: 2 / 4;
+  color: var(--kl-orange);
+  font-size: 12px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 6px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--kl-panel-border);
+  border-radius: var(--kl-radius);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.field input {
+  color: var(--kl-text-normal);
+  background: var(--kl-input__bg);
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  padding: 5px 8px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.or {
+  color: var(--kl-text-disabled);
+  font-size: 12px;
+}
+
+.oauthBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--kl-text-accent);
+  border-radius: var(--kl-radius);
+}
+
+.userCode {
+  font-family: var(--kl-font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  user-select: all;
+}
+
+.error {
+  color: var(--kl-red);
+  font-size: 12px;
+  margin: 0;
+}
+
+.summary {
+  cursor: pointer;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.rate {
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.orgs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  grid-column: 2 / 4;
+}
+
+.orgRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.orgRow select {
+  min-width: 200px;
+}
+
+.orgPrompt {
+  padding: 4px 8px;
+  border: 1px solid var(--kl-orange);
+  border-radius: var(--kl-radius);
+  font-size: 12px;
+  color: var(--kl-text-normal);
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": ["out/**", "dist/**"] },
+    "typecheck": { "dependsOn": ["^typecheck"] },
+    "test": { "dependsOn": [], "outputs": [] },
+    "test:coverage": {
+      "description": "Spec 15 §7.4 coverage gate (vitest v8 thresholds; packages/git, packages/graph, packages/providers).",
+      "dependsOn": [],
+      "outputs": ["coverage/**"],
+      "passThroughEnv": ["GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM"]
+    }
+  }
+}

@@ -1,0 +1,82 @@
+# Spec 15 §6.6: typecheck → lint → unit tests → build → e2e smoke on all three OSes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Configure git identity for tests
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      - name: Unit & integration tests
+        run: pnpm test
+      - name: Coverage gate (spec 15 §7.4)
+        if: runner.os == 'Linux'
+        run: pnpm test:coverage
+      - name: Build
+        run: pnpm build
+      - name: E2E smoke (Linux needs a virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum pnpm --filter @githappens/desktop test:e2e
+      - name: E2E smoke
+        if: runner.os != 'Linux'
+        run: pnpm --filter @githappens/desktop test:e2e
+      - name: Upload e2e artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.os }}
+          path: apps/desktop/test-results
+
+  min-git:
+    # Spec 02 §6.16: integration tests against the minimum supported system git (2.36).
+    name: git 2.36 (system)
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    steps:
+      - name: Install toolchain and git 2.36 from source
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl make gcc libssl-dev libcurl4-openssl-dev libexpat1-dev zlib1g-dev gettext xz-utils
+          curl -fsSL https://mirrors.edge.kernel.org/pub/software/scm/git/git-2.36.6.tar.xz | tar -xJ
+          make -C git-2.36.6 prefix=/usr/local NO_TCLTK=1 NO_PERL=1 NO_PYTHON=1 -j"$(nproc)" install >/dev/null
+          git --version
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+      - run: pnpm --filter @githappens/git --filter @githappens/fixtures test

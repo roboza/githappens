@@ -1,0 +1,107 @@
+/* Base styles; all colors come from theme tokens (--kl-*) injected by applyTheme(). */
+:root {
+  --kl-font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  --kl-font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+  --kl-radius: 6px;
+  --kl-space-1: 4px;
+  --kl-space-2: 8px;
+  --kl-space-3: 12px;
+  --kl-space-4: 16px;
+  --kl-space-6: 24px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--kl-font-ui);
+  font-size: 13px;
+  line-height: 1.45;
+  background: var(--kl-app__bg0);
+  color: var(--kl-text-normal);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--kl-default-border);
+  background: var(--kl-btn-bg);
+  color: var(--kl-btn-text);
+  border-radius: var(--kl-radius);
+  padding: 5px 12px;
+}
+button:hover:not(:disabled) {
+  background: var(--kl-btn-bg-hover);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.primary {
+  background: var(--kl-primary-bg);
+  border-color: transparent;
+  color: #fff;
+}
+button.primary:hover:not(:disabled) {
+  background: var(--kl-primary-bg-hover);
+}
+
+input[type='text'],
+select {
+  background: var(--kl-input__bg);
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  padding: 5px 8px;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--kl-text-accent);
+  outline-offset: 1px;
+}
+
+code,
+.mono {
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  user-select: text;
+}
+
+a {
+  color: var(--kl-link-color);
+}
+
+/* ui.reduceMotion (spec 13 UI Customization): "on" always, "os" follows the OS setting. */
+:root[data-reduce-motion='on'] *,
+:root[data-reduce-motion='on'] *::before,
+:root[data-reduce-motion='on'] *::after {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-reduce-motion='os'] *,
+  :root[data-reduce-motion='os'] *::before,
+  :root[data-reduce-motion='os'] *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}

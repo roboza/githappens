@@ -1,0 +1,61 @@
+# Self-hosted GitHappens Cloud: Postgres 16 + the server + a volume for blobs and keys.
+#
+#   cd services/cloud
+#   cp .env.example .env   # then edit: password, public URL, identity providers
+#   docker compose up -d --build
+#
+# Put a TLS-terminating reverse proxy (Caddy, nginx, Traefik…) in front of port 8787 and set
+# GH_CLOUD_PUBLIC_URL to the https:// URL users will enter in GitHappens.
+name: githappens-cloud
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: githappens
+      POSTGRES_PASSWORD: ${GH_DB_PASSWORD:?set GH_DB_PASSWORD in .env}
+      POSTGRES_DB: githappens
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U githappens -d githappens']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  cloud:
+    build:
+      context: ../..
+      dockerfile: services/cloud/Dockerfile
+    image: githappens-cloud:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '${GH_CLOUD_BIND:-127.0.0.1}:8787:8787'
+    environment:
+      GH_CLOUD_DATABASE_URL: postgres://githappens:${GH_DB_PASSWORD}@db:5432/githappens
+      GH_CLOUD_PUBLIC_URL: ${GH_CLOUD_PUBLIC_URL:-http://localhost:8787}
+      GH_CLOUD_TRUST_PROXY: ${GH_CLOUD_TRUST_PROXY:-false}
+      GH_CLOUD_JWT_KEY: ${GH_CLOUD_JWT_KEY:-}
+      GH_CLOUD_SECRET: ${GH_CLOUD_SECRET:-}
+      GH_CLOUD_GITHUB_CLIENT_ID: ${GH_CLOUD_GITHUB_CLIENT_ID:-}
+      GH_CLOUD_GITHUB_CLIENT_SECRET: ${GH_CLOUD_GITHUB_CLIENT_SECRET:-}
+      GH_CLOUD_GITLAB_CLIENT_ID: ${GH_CLOUD_GITLAB_CLIENT_ID:-}
+      GH_CLOUD_GITLAB_CLIENT_SECRET: ${GH_CLOUD_GITLAB_CLIENT_SECRET:-}
+      GH_CLOUD_GITLAB_URL: ${GH_CLOUD_GITLAB_URL:-https://gitlab.com}
+      GH_CLOUD_GOOGLE_CLIENT_ID: ${GH_CLOUD_GOOGLE_CLIENT_ID:-}
+      GH_CLOUD_GOOGLE_CLIENT_SECRET: ${GH_CLOUD_GOOGLE_CLIENT_SECRET:-}
+      GH_CLOUD_MAIL_TRANSPORT: ${GH_CLOUD_MAIL_TRANSPORT:-none}
+      GH_CLOUD_MAIL_WEBHOOK: ${GH_CLOUD_MAIL_WEBHOOK:-}
+      GH_CLOUD_DEV_LOGIN: ${GH_CLOUD_DEV_LOGIN:-false}
+      GH_CLOUD_PATCH_MAX_BYTES: ${GH_CLOUD_PATCH_MAX_BYTES:-26214400}
+      GH_CLOUD_PATCH_MAX_EXPIRY_DAYS: ${GH_CLOUD_PATCH_MAX_EXPIRY_DAYS:-}
+    volumes:
+      - data:/data
+
+volumes:
+  db:
+  data:

@@ -1,0 +1,15 @@
+{
+  "name": "@githappens/fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic fixture repo generators (spec 15 §7.2, spec 02 §6.16).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "make": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  }
+}

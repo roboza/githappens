@@ -1,0 +1,60 @@
+.banner {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--kl-panel-border);
+  background: color-mix(in srgb, var(--kl-blue) 14%, var(--kl-panel__bg1));
+  min-width: 0;
+}
+
+.conflicted {
+  background: color-mix(in srgb, var(--kl-orange) 16%, var(--kl-panel__bg1));
+}
+
+.icon {
+  flex: none;
+  color: var(--kl-blue);
+}
+
+.conflicted .icon {
+  color: var(--kl-orange);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  font-size: 12px;
+}
+
+.title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.status {
+  color: var(--kl-text-secondary);
+}
+
+.buttons {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.buttons button {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.danger {
+  color: var(--kl-red);
+}

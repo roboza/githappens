@@ -1,0 +1,3507 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GitHappens Cloud API",
+    "version": "0.1.0",
+    "description": "GitHappens Cloud REST contract (spec 14 §5.3). Single source of truth for services/cloud and the\ndesktop CloudClient. All bodies are JSON unless noted; all `/v1/*` routes except the ones marked\nPUBLIC require `Authorization: Bearer <access token>`.\n\nConventions\n- Errors: non-2xx with `ApiError` body. 401 `unauthorized` (expired/invalid access token → refresh\n  and retry once), 403 `forbidden`, 404 `not_found`, 409 `conflict`, 410 `gone` (expired/deleted\n  patch), 412 `precondition_failed` (If-Match version mismatch; body carries `currentVersion`),\n  413 `too_large`, 422 `validation`, 429 `rate_limited` (+ `Retry-After` seconds).\n- Optimistic concurrency: resources with `version` accept `If-Match: <version>` on writes; the server\n  increments `version` on every successful write. Creating a sync category uses `If-Match: 0`.\n- Pagination: list routes accept `?cursor=&limit=` (default 50, max 200) and return `Page<T>`.\n- Times are ISO-8601 strings (UTC). Ids are UUIDs except patch ids (22-char base62, 128-bit random).\n- Binary payloads (sync ciphertext, nonces) are base64url strings without padding.",
+    "license": {
+      "name": "Proprietary"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "paths": {
+    "/.well-known/githappens-cloud": {
+      "get": {
+        "operationId": "getWellknownGithappenscloud",
+        "summary": "PUBLIC → `ServerInfo` (desktop calls it to validate a server URL).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "getHealthz",
+        "summary": "PUBLIC → `{ status: 'ok' }`.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {}
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/authorize": {
+      "get": {
+        "operationId": "getOauthAuthorize",
+        "summary": "&code_challenge=<S256>&code_challenge_method=S256&state=<random>&idp=<IdpId>[&login_hint=<email>] PUBLIC. Browser page. Federates to the chosen identity provider, then redirects to `redirect_uri?code=…&state=…` (or `?error=…`). redirect_uri must be http://127.0.0.1:<any port>/… or http://localhost:<",
+        "parameters": [
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "HTML page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/revoke": {
+      "post": {
+        "operationId": "postOauthRevoke",
+        "summary": "PUBLIC. `{ token }` (refresh token) → 200 `{}` (always, even if unknown).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {}
+                },
+                "required": ["token"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/token": {
+      "post": {
+        "operationId": "postOauthToken",
+        "summary": "PUBLIC. Form or JSON `TokenRequest` → `TokenResponse`.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenapijson",
+        "summary": "PUBLIC → OpenAPI 3.1 document generated from this file (services/cloud/openapi.json)",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/p/{id}": {
+      "get": {
+        "operationId": "getPId",
+        "summary": "PUBLIC HTML viewer page; decrypts in the browser using the `#k=` fragment (fragment never reaches the server) and offers \"Open in GitHappens\" (githappens://patch/<id>#k=<key>).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "HTML page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invites/{token}/accept": {
+      "post": {
+        "operationId": "postV1InvitesTokenAccept",
+        "summary": "→ Org (any signed-in user; email need not match in v1)",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Org"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/launchpad/state": {
+      "get": {
+        "operationId": "getV1LaunchpadState",
+        "summary": "→ `{ version, doc }` (doc = itemStates + savedViews JSON, plaintext)",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {},
+                    "doc": {}
+                  },
+                  "required": ["version", "doc"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putV1LaunchpadState",
+        "summary": "If-Match `{ doc }` → `{ version }` | 412",
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "doc": {}
+                },
+                "required": ["doc"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {}
+                  },
+                  "required": ["version"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "operationId": "getV1Me",
+        "summary": "→ Me",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1Me",
+        "summary": "→ 202 `{ deleteAfter: IsoTime }` (hard delete incl. blobs within 7 days)",
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleteAfter": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["deleteAfter"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/export": {
+      "get": {
+        "operationId": "getV1MeExport",
+        "summary": "→ `{ user, orgs, syncCategories: SyncCategoryInfo[], patches: PatchMeta[], workspaces: CloudWorkspace[] }`",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {},
+                    "orgs": {},
+                    "syncCategories": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SyncCategoryInfo"
+                      }
+                    },
+                    "patches": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PatchMeta"
+                      }
+                    },
+                    "workspaces": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CloudWorkspace"
+                      }
+                    }
+                  },
+                  "required": ["user", "orgs", "syncCategories", "patches", "workspaces"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs": {
+      "post": {
+        "operationId": "postV1Orgs",
+        "summary": "`{ name, slug? }` → 201 Org (caller becomes owner)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {},
+                  "slug": {}
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Org"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}": {
+      "get": {
+        "operationId": "getV1OrgsId",
+        "summary": "→ OrgDetail (members only)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchV1OrgsId",
+        "summary": "`{ name? }` → Org (admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Org"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1OrgsId",
+        "summary": "→ 204 (owner)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/invites": {
+      "post": {
+        "operationId": "postV1OrgsIdInvites",
+        "summary": "`{ email, role }` → 201 `Invite & { acceptUrl }` (admin). acceptUrl = `<server>/invite/<token>` (PUBLIC page that deep-links `githappens://invite/<token>`); token 7 days.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {},
+                  "role": {}
+                },
+                "required": ["email", "role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Invite"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "acceptUrl": {}
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getV1OrgsIdInvites",
+        "summary": "→ Invite[] (admin; pending only)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invite"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/invites/{inviteId}": {
+      "delete": {
+        "operationId": "deleteV1OrgsIdInvitesInviteId",
+        "summary": "→ 204",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "inviteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/members/{userId}": {
+      "patch": {
+        "operationId": "patchV1OrgsIdMembersUserId",
+        "summary": "`{ role }` → OrgMember (admin; owners only by owner)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {}
+                },
+                "required": ["role"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgMember"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1OrgsIdMembersUserId",
+        "summary": "→ 204 (admin, or self = leave; deletes their footprints)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/policies": {
+      "patch": {
+        "operationId": "patchV1OrgsIdPolicies",
+        "summary": "`Partial<OrgPolicies>` → OrgPolicies (admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgPolicies"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgPolicies"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/teams": {
+      "get": {
+        "operationId": "getV1OrgsIdTeams",
+        "summary": "→ Team[]",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postV1OrgsIdTeams",
+        "summary": "`{ name }` → 201 Team (admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {}
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/teams/{teamId}": {
+      "patch": {
+        "operationId": "patchV1OrgsIdTeamsTeamId",
+        "summary": "`{ name }` → Team (admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {}
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1OrgsIdTeamsTeamId",
+        "summary": "→ 204 (admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{id}/teams/{teamId}/members": {
+      "put": {
+        "operationId": "putV1OrgsIdTeamsTeamIdMembers",
+        "summary": "`{ userIds: string[] }` → Team (admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["userIds"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/footprints": {
+      "put": {
+        "operationId": "putV1OrgsOrgIdFootprints",
+        "summary": "FootprintPut → `{ repoIdentityId }`",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FootprintPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repoIdentityId": {}
+                  },
+                  "required": ["repoIdentityId"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getV1OrgsOrgIdFootprints",
+        "summary": "→ Footprint[] (excludes caller)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Footprint"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/footprints/{repoIdentityId}/{branchHash}": {
+      "delete": {
+        "operationId": "deleteV1OrgsOrgIdFootprintsRepoIdentityIdBranchHash",
+        "summary": "→ 204",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repoIdentityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchHash",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/repo-identities": {
+      "get": {
+        "operationId": "getV1OrgsOrgIdRepoidentities",
+        "summary": "→ `{ id } | 404` (resolve id for a repo)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {}
+                  },
+                  "required": ["id"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/{orgId}/team": {
+      "get": {
+        "operationId": "getV1OrgsOrgIdTeam",
+        "summary": "→ TeamView (aggregated, includes caller)",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamView"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/patches": {
+      "post": {
+        "operationId": "postV1Patches",
+        "summary": "PatchCreate → 201 PatchCreated (status 'pending' until complete)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchCreated"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getV1Patches",
+        "summary": "key>]&cursor&limit → Page<PatchMeta> mine = authored; shared = visibility org (my orgs) or collaborators including me",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PatchMeta"
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["items"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/patches/{id}": {
+      "get": {
+        "operationId": "getV1PatchesId",
+        "summary": "→ PatchMeta & { downloadUrl } — Bearer OPTIONAL: anonymous allowed for visibility 'link'; 401 if anonymous and not 'link'; 403 if not allowed; 410 if expired/deleted/not completed.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/PatchMeta"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "downloadUrl": {}
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchV1PatchesId",
+        "summary": "PatchUpdate → PatchMeta (author)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchMeta"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1PatchesId",
+        "summary": "→ 204 (author or org admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/patches/{id}/complete": {
+      "post": {
+        "operationId": "postV1PatchesIdComplete",
+        "summary": "→ PatchMeta (server verifies byte length + sha256)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchMeta"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/suggestions": {
+      "post": {
+        "operationId": "postV1Suggestions",
+        "summary": "SuggestionCreate → 201 Suggestion (patch must be the caller's, kind 'suggestion', completed and live)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getV1Suggestions",
+        "summary": "→ Suggestion[] — newest first; only suggestions whose patch the caller can read (anonymous callers see link-visibility ones). `host` and `pr` are optional.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "host",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pr",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Suggestion"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/suggestions/{id}": {
+      "get": {
+        "operationId": "getV1SuggestionsId",
+        "summary": "→ Suggestion — Bearer OPTIONAL (same rule as the patch)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {},
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchV1SuggestionsId",
+        "summary": "SuggestionUpdate → Suggestion. `status`: anyone who can read the patch (signed in); `commentId`: the suggestion's author only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sync": {
+      "get": {
+        "operationId": "getV1Sync",
+        "summary": "→ SyncCategoryInfo[]",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SyncCategoryInfo"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1Sync",
+        "summary": "→ 204 (deletes every category incl. `_keys`; \"Reset sync data\")",
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/sync/{category}": {
+      "get": {
+        "operationId": "getV1SyncCategory",
+        "summary": "→ SyncItem | 404",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncItem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putV1SyncCategory",
+        "summary": "If-Match: <version> (0 to create) body SyncPut → `{ version }` | 412",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {}
+                  },
+                  "required": ["version"]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "operationId": "getV1Workspaces",
+        "summary": "→ CloudWorkspace[] (own + shared with me via org/team)",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CloudWorkspace"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postV1Workspaces",
+        "summary": "`{ orgId?, doc }` → 201 CloudWorkspace",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "orgId": {},
+                  "doc": {}
+                },
+                "required": ["doc"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudWorkspace"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}": {
+      "get": {
+        "operationId": "getV1WorkspacesId",
+        "summary": "→ CloudWorkspace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudWorkspace"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putV1WorkspacesId",
+        "summary": "If-Match `{ doc }` → CloudWorkspace | 412",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "doc": {}
+                },
+                "required": ["doc"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudWorkspace"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteV1WorkspacesId",
+        "summary": "→ 204 (owner or org admin)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/shares": {
+      "put": {
+        "operationId": "putV1WorkspacesIdShares",
+        "summary": "`{ shares: WorkspaceShare[] }` → CloudWorkspace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shares": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/WorkspaceShare"
+                    }
+                  }
+                },
+                "required": ["shares"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudWorkspace"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "unauthorized",
+              "forbidden",
+              "not_found",
+              "conflict",
+              "gone",
+              "precondition_failed",
+              "too_large",
+              "validation",
+              "rate_limited",
+              "server"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "currentVersion": {
+            "type": "number",
+            "description": "412 only."
+          }
+        },
+        "required": ["error", "message"]
+      },
+      "CloudWorkspace": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ownerUserId": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "doc": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Workspace document WITHOUT local paths (spec 11 Workspace minus localPath fields)."
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceShare"
+            }
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "ownerUserId", "version", "doc", "shares", "updatedAt"]
+      },
+      "CloudWorkspaceDoc": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "const": "githappens-workspace/1"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "repos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "remoteUrl": {
+                  "type": "string",
+                  "description": "Clone URL without credentials."
+                },
+                "provider": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string"
+                    },
+                    "host": {
+                      "type": "string"
+                    },
+                    "owner": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "webUrl": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["kind", "host", "owner", "name"]
+                }
+              },
+              "required": ["name"]
+            }
+          }
+        },
+        "required": ["format", "name", "repos"],
+        "description": "Cloud workspace document written by the desktop (`CloudWorkspace.doc`); never contains local paths."
+      },
+      "Footprint": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "repoIdentityId": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "branchHash": {
+            "type": "string",
+            "description": "base64url(HMAC-SHA256(orgFootprintSalt, repoIdentityKey + ':' + branchName))."
+          },
+          "branchLabel": {
+            "type": "string"
+          },
+          "baseRef": {
+            "type": "string"
+          },
+          "headSha": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FootprintFile"
+            }
+          }
+        },
+        "required": ["user", "repoIdentityId", "updatedAt", "branchHash", "baseRef", "headSha", "files"]
+      },
+      "FootprintFile": {
+        "type": "object",
+        "properties": {
+          "pathHash": {
+            "type": "string",
+            "description": "base64url(HMAC-SHA256(orgFootprintSalt, repoIdentityKey + ':' + path))."
+          },
+          "path": {
+            "type": "string",
+            "description": "Only when org policy footprintSharePaths = true."
+          },
+          "ranges": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "description": "Changed line ranges in BASE-file coordinates, inclusive [start, end]; empty = whole file / unknown."
+          }
+        },
+        "required": ["pathHash", "ranges"]
+      },
+      "FootprintPut": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "$ref": "#/components/schemas/RepoIdentity"
+          },
+          "branchHash": {
+            "type": "string",
+            "description": "base64url(HMAC-SHA256(orgFootprintSalt, repoIdentityKey + ':' + branchName))."
+          },
+          "branchLabel": {
+            "type": "string"
+          },
+          "baseRef": {
+            "type": "string"
+          },
+          "headSha": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FootprintFile"
+            }
+          }
+        },
+        "required": ["repo", "branchHash", "baseRef", "headSha", "files"]
+      },
+      "IdpId": {
+        "type": "string",
+        "enum": ["github", "gitlab", "google", "email", "dev"],
+        "description": "`dev` exists only when the server runs with GH_CLOUD_DEV_LOGIN=1 (tests / local development)."
+      },
+      "Invite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrgRole"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "orgId", "email", "role", "expiresAt", "createdAt"]
+      },
+      "IsoTime": {
+        "type": "string",
+        "description": "GitHappens Cloud REST contract (spec 14 §5.3). Single source of truth for services/cloud and the\ndesktop CloudClient. All bodies are JSON unless noted; all `/v1/*` routes except the ones marked\nPUBLIC require `Authorization: Bearer <access token>`.\n\nConventions\n- Errors: non-2xx with `ApiError` body. 401 `unauthorized` (expired/invalid access token → refresh\n  and retry once), 403 `forbidden`, 404 `not_found`, 409 `conflict`, 410 `gone` (expired/deleted\n  patch), 412 `precondition_failed` (If-Match version mismatch; body carries `currentVersion`),\n  413 `too_large`, 422 `validation`, 429 `rate_limited` (+ `Retry-After` seconds).\n- Optimistic concurrency: resources with `version` accept `If-Match: <version>` on writes; the server\n  increments `version` on every successful write. Creating a sync category uses `If-Match: 0`.\n- Pagination: list routes accept `?cursor=&limit=` (default 50, max 200) and return `Page<T>`.\n- Times are ISO-8601 strings (UTC). Ids are UUIDs except patch ids (22-char base62, 128-bit random).\n- Binary payloads (sync ciphertext, nonces) are base64url strings without padding."
+      },
+      "Me": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "orgs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "role": {
+                  "$ref": "#/components/schemas/OrgRole"
+                }
+              },
+              "required": ["id", "name", "slug", "role"]
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["email", "orgs", "id", "name"]
+      },
+      "Org": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/OrgPolicies"
+          },
+          "footprintSalt": {
+            "type": "string",
+            "description": "Per-org secret for footprint path HMACs (members only; spec 14 §6.5). base64url, 32 bytes."
+          }
+        },
+        "required": ["id", "name", "slug", "policies", "footprintSalt"]
+      },
+      "OrgDetail": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgMember"
+            }
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Team"
+            }
+          },
+          "myRole": {
+            "$ref": "#/components/schemas/OrgRole"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/OrgPolicies"
+          },
+          "footprintSalt": {
+            "type": "string",
+            "description": "Per-org secret for footprint path HMACs (members only; spec 14 §6.5). base64url, 32 bytes."
+          }
+        },
+        "required": ["members", "teams", "myRole", "id", "name", "slug", "policies", "footprintSalt"]
+      },
+      "OrgMember": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "role": {
+            "$ref": "#/components/schemas/OrgRole"
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["user", "role", "joinedAt"]
+      },
+      "OrgPolicies": {
+        "type": "object",
+        "properties": {
+          "patchMaxExpiryDays": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Max patch expiry in days; null = no cap."
+          },
+          "allowPublicLinks": {
+            "type": "boolean",
+            "description": "Allow `visibility: 'link'` patches by members."
+          },
+          "footprintSharePaths": {
+            "type": "boolean",
+            "description": "Footprints carry plaintext paths (default false → path hashes only)."
+          },
+          "footprintShareBranchNames": {
+            "type": "boolean",
+            "description": "Footprints carry a plaintext branch label (default false → hash only)."
+          }
+        },
+        "required": [
+          "patchMaxExpiryDays",
+          "allowPublicLinks",
+          "footprintSharePaths",
+          "footprintShareBranchNames"
+        ]
+      },
+      "OrgRole": {
+        "type": "string",
+        "enum": ["owner", "admin", "member"]
+      },
+      "PatchCreate": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PatchKind"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "repo": {
+            "$ref": "#/components/schemas/RepoIdentity"
+          },
+          "baseSha": {
+            "type": "string"
+          },
+          "baseBranch": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatchFile"
+            },
+            "description": "Omitted for e2e patches."
+          },
+          "e2e": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "number"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/PatchVisibility"
+          },
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": ["title", "kind", "baseSha", "e2e", "size", "sha256", "visibility"]
+      },
+      "PatchCreated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "uploadUrl": {
+            "type": "string"
+          },
+          "webUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "uploadUrl", "webUrl"]
+      },
+      "PatchFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["A", "M", "D", "R"]
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "binary": {
+            "type": "boolean"
+          }
+        },
+        "required": ["path", "status", "additions", "deletions"]
+      },
+      "PatchKind": {
+        "type": "string",
+        "enum": ["wip", "commit", "stash", "suggestion"]
+      },
+      "PatchMeta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PatchKind"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "repo": {
+            "$ref": "#/components/schemas/RepoIdentity"
+          },
+          "baseSha": {
+            "type": "string"
+          },
+          "baseBranch": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatchFile"
+            }
+          },
+          "e2e": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "number"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/PatchVisibility"
+          },
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserRef"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "webUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "author",
+          "baseSha",
+          "e2e",
+          "size",
+          "sha256",
+          "visibility",
+          "createdAt",
+          "webUrl"
+        ]
+      },
+      "PatchUpdate": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": ["org", "link", "collaborators"]
+          },
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        }
+      },
+      "PatchVisibility": {
+        "type": "string",
+        "enum": ["org", "link", "collaborators"]
+      },
+      "PatchWithDownload": {
+        "type": "object",
+        "properties": {
+          "downloadUrl": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PatchKind"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "repo": {
+            "$ref": "#/components/schemas/RepoIdentity"
+          },
+          "baseSha": {
+            "type": "string"
+          },
+          "baseBranch": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatchFile"
+            }
+          },
+          "e2e": {
+            "type": "boolean"
+          },
+          "size": {
+            "type": "number"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/PatchVisibility"
+          },
+          "collaborators": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserRef"
+            }
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "webUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "downloadUrl",
+          "id",
+          "title",
+          "kind",
+          "author",
+          "baseSha",
+          "e2e",
+          "size",
+          "sha256",
+          "visibility",
+          "createdAt",
+          "webUrl"
+        ]
+      },
+      "RepoIdentity": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "initialCommitSha": {
+            "type": "string",
+            "description": "First root commit (`git rev-list --max-parents=0 HEAD | tail -1`) — matches forks/mirrors."
+          }
+        },
+        "required": ["provider", "host", "owner", "name"]
+      },
+      "ServerInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "idps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdpId"
+            },
+            "description": "Identity providers configured on this server."
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "patchMaxBytes": {
+                "type": "number"
+              },
+              "patchMaxExpiryDays": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            "required": ["patchMaxBytes", "patchMaxExpiryDays"]
+          }
+        },
+        "required": ["name", "version", "idps", "limits"]
+      },
+      "Suggestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "patchId": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "prHeadSha": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SuggestionStatus"
+          },
+          "statusBy": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "commentId": {
+            "type": "string"
+          },
+          "coAuthor": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "email"]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "webUrl": {
+            "type": "string",
+            "description": "Web viewer of the underlying patch (`<server>/p/<patchId>`; the desktop appends `#k=` for e2e)."
+          },
+          "deepLink": {
+            "type": "string",
+            "description": "`githappens://suggestion/<id>`."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provider kind ('github', 'gitlab', …)."
+          },
+          "host": {
+            "type": "string",
+            "description": "Provider host ('github.com', 'ghe.acme.com')."
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "prNumber": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "patchId",
+          "author",
+          "prHeadSha",
+          "title",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "webUrl",
+          "deepLink",
+          "provider",
+          "host",
+          "owner",
+          "repo",
+          "prNumber"
+        ]
+      },
+      "SuggestionCreate": {
+        "type": "object",
+        "properties": {
+          "patchId": {
+            "type": "string"
+          },
+          "prHeadSha": {
+            "type": "string",
+            "description": "PR head the suggestion was made against (40/64 hex)."
+          },
+          "title": {
+            "type": "string"
+          },
+          "commentId": {
+            "type": "string",
+            "description": "Provider comment id once the PR comment exists (can be set later with PATCH)."
+          },
+          "coAuthor": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "email"],
+            "description": "Identity for the `Co-authored-by:` trailer when the author commits the suggestion."
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provider kind ('github', 'gitlab', …)."
+          },
+          "host": {
+            "type": "string",
+            "description": "Provider host ('github.com', 'ghe.acme.com')."
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "prNumber": {
+            "type": "number"
+          }
+        },
+        "required": ["patchId", "prHeadSha", "title", "provider", "host", "owner", "repo", "prNumber"]
+      },
+      "SuggestionPrRef": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider kind ('github', 'gitlab', …)."
+          },
+          "host": {
+            "type": "string",
+            "description": "Provider host ('github.com', 'ghe.acme.com')."
+          },
+          "owner": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "prNumber": {
+            "type": "number"
+          }
+        },
+        "required": ["provider", "host", "owner", "repo", "prNumber"]
+      },
+      "SuggestionStatus": {
+        "type": "string",
+        "enum": ["open", "applied", "dismissed"]
+      },
+      "SuggestionUpdate": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["open", "applied", "dismissed"]
+          },
+          "commentId": {
+            "type": "string"
+          }
+        }
+      },
+      "SyncCategory": {
+        "type": "string",
+        "enum": [
+          "_keys",
+          "preferences",
+          "keybindings",
+          "themes",
+          "workspaces-local",
+          "launchpad",
+          "integrations-list",
+          "profiles"
+        ],
+        "description": "Desktop categories plus `_keys` (wrapped data-encryption key). Server accepts /^[a-z_][a-z0-9-]{0,40}$/."
+      },
+      "SyncCategoryInfo": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": ["category", "version", "updatedAt", "size"]
+      },
+      "SyncItem": {
+        "type": "object",
+        "properties": {
+          "ciphertext": {
+            "type": "string"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": ["ciphertext", "nonce", "category", "version", "updatedAt", "size"]
+      },
+      "SyncPut": {
+        "type": "object",
+        "properties": {
+          "ciphertext": {
+            "type": "string"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "deviceId": {
+            "type": "string"
+          }
+        },
+        "required": ["ciphertext", "nonce", "deviceId"]
+      },
+      "Team": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "memberIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["id", "orgId", "name", "memberIds"]
+      },
+      "TeamView": {
+        "type": "object",
+        "properties": {
+          "repos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "repoIdentityId": {
+                  "type": "string"
+                },
+                "repo": {
+                  "$ref": "#/components/schemas/RepoIdentity"
+                },
+                "members": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "user": {
+                        "$ref": "#/components/schemas/UserRef"
+                      },
+                      "branches": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "branchHash": {
+                              "type": "string"
+                            },
+                            "branchLabel": {
+                              "type": "string"
+                            },
+                            "fileCount": {
+                              "type": "number"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["branchHash", "fileCount", "updatedAt"]
+                        }
+                      },
+                      "lastActivity": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["user", "branches", "lastActivity"]
+                  }
+                }
+              },
+              "required": ["repoIdentityId", "repo", "members"]
+            }
+          }
+        },
+        "required": ["repos"]
+      },
+      "TokenRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "grant_type": {
+                "type": "string",
+                "const": "authorization_code"
+              },
+              "code": {
+                "type": "string"
+              },
+              "code_verifier": {
+                "type": "string"
+              },
+              "redirect_uri": {
+                "type": "string"
+              },
+              "client_id": {
+                "type": "string",
+                "const": "desktop"
+              }
+            },
+            "required": ["grant_type", "code", "code_verifier", "redirect_uri", "client_id"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "grant_type": {
+                "type": "string",
+                "const": "refresh_token"
+              },
+              "refresh_token": {
+                "type": "string"
+              },
+              "client_id": {
+                "type": "string",
+                "const": "desktop"
+              }
+            },
+            "required": ["grant_type", "refresh_token", "client_id"]
+          }
+        ]
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expires_in": {
+            "type": "number"
+          },
+          "refresh_token": {
+            "type": "string"
+          }
+        },
+        "required": ["access_token", "token_type", "expires_in", "refresh_token"]
+      },
+      "UserRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name"]
+      },
+      "WorkspaceShare": {
+        "type": "object",
+        "properties": {
+          "principalType": {
+            "type": "string",
+            "enum": ["team", "user", "org"]
+          },
+          "principalId": {
+            "type": "string"
+          }
+        },
+        "required": ["principalType", "principalId"]
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+  - services/*
+  - test/fixtures
+allowBuilds:
+  '@parcel/watcher': false
+  dugite: true
+  electron-winstaller: false
+  esbuild: true

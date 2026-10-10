@@ -1,0 +1,38 @@
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 8px 8px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--kl-default-border);
+  border-left: 3px solid var(--kl-text-accent);
+  border-radius: var(--kl-radius);
+  background: var(--kl-app__bg0);
+  font-size: 12px;
+}
+
+.bannerText {
+  flex: 1 1 140px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bannerSub {
+  margin-top: 2px;
+  color: var(--kl-text-secondary);
+}
+
+.bannerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bannerActions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 8px;
+}

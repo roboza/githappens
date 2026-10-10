@@ -1,0 +1,70 @@
+# Spec 15 §6.6 (3): nightly preview-channel build from `main`.
+# Version = next patch of apps/desktop/package.json + `-preview.<yyyymmdd>` (e.g. 0.1.1-preview.20261009),
+# so release.yml builds with `-c.publish.channel=preview`: electron-builder emits preview.yml /
+# preview-mac.yml / preview-linux*.yml, which go to R2 `releases/` next to the installers, with fixed-name
+# copies in `preview/` (docs/releases.md). The GitHub release (private repo) is an internal prerelease
+# record. Clients on the Preview channel (UpdaterService: channel 'preview') pick it up.
+name: Nightly (preview)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build even if main has no commits in the last 24 h
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: Compute preview version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      skip: ${{ steps.v.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 50
+      - name: Version and change check
+        id: v
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          base=$(node -p "require('./apps/desktop/package.json').version.split('-')[0]")
+          next=$(node -p "const [a,b,c]='$base'.split('.').map(Number); [a,b,c+1].join('.')")
+          version="${next}-preview.$(date -u +%Y%m%d)"
+          skip=false
+          if [ "$FORCE" != "true" ] && [ -z "$(git log --since='25 hours ago' --oneline)" ]; then
+            echo "No commits on main in the last 24 h — skipping"
+            skip=true
+          fi
+          if gh release view "v$version" --json isDraft --jq '.isDraft' 2>/dev/null | grep -q false; then
+            echo "v$version is already published — skipping"
+            skip=true
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "Preview version: $version (skip=$skip)"
+
+  # Same per-OS/arch matrix as tagged releases (x64 + macOS arm64; Windows/Linux arm64 when the
+  # repository variable GH_ARM_RUNNERS is set — reusable workflows read the caller repo's variables).
+  release:
+    name: Build preview
+    needs: version
+    if: needs.version.outputs.skip != 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+    secrets: inherit

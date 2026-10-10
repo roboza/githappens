@@ -1,0 +1,180 @@
+.toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 10px;
+  min-height: 52px;
+  background: var(--kl-panel__bg1);
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 0;
+  color: var(--kl-text-secondary);
+}
+
+.crumb {
+  color: var(--kl-text-normal);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sep {
+  flex: none;
+  opacity: 0.6;
+}
+
+.state {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--kl-danger-row);
+  color: var(--kl-orange);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.right {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.divider {
+  width: 1px;
+  height: 28px;
+  margin: 0 6px;
+  background: var(--kl-panel-border);
+}
+
+.tool {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 48px;
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-normal);
+  border-radius: 6px;
+}
+
+.tool:hover:not(:disabled) {
+  background: var(--kl-hover-row);
+}
+
+.toolLabel {
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 4px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--kl-primary-bg);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+@media (max-width: 1100px) {
+  .toolLabel {
+    display: none;
+  }
+  .tool {
+    min-width: 34px;
+  }
+}
+
+.toolWrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.menuBtn {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  padding: 0;
+  margin-left: -6px;
+  border: none;
+  background: transparent;
+  color: var(--kl-text-secondary);
+  border-radius: 4px;
+}
+
+.menuBtn:hover:not(:disabled) {
+  background: var(--kl-hover-row);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+  color: var(--kl-text-accent);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ui.toolbarLabels off: icons only */
+.toolbar[data-labels='off'] .toolLabel {
+  display: none;
+}
+
+.toolbar[data-labels='off'] .tool {
+  min-width: 34px;
+  padding: 7px 6px;
+}
+
+/* auto-fetch paused (spec 09 §6.2 step 4) */
+.alertDot {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--kl-orange);
+}
+
+/* Breadcrumb switchers (spec 01 §4.4). */
+.crumbBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 280px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.crumbBtn:hover:not(:disabled) {
+  background: var(--kl-hover-row);
+  border-color: var(--kl-panel-border);
+}

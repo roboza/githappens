@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="12 6 40 48">
+  <title>GitHappens</title>
+  <g fill="none" stroke="#c8f031" stroke-width="6" stroke-linecap="round">
+    <path d="M24 13v32"/>
+    <path d="M24 38c0-12 16-8 16-19"/>
+  </g>
+  <circle cx="40" cy="18" r="7.5" fill="#ff5a5f"/>
+  <circle cx="24" cy="46" r="7.5" fill="#2fd46b"/>
+</svg>

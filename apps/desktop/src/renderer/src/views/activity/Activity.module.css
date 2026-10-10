@@ -1,0 +1,166 @@
+.drawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  height: min(320px, 45vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--kl-panel__bg0);
+  border-top: 1px solid var(--kl-panel-border);
+  box-shadow: var(--kl-shadow);
+  color: var(--kl-text-normal);
+  z-index: 900;
+}
+
+.head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  background: var(--kl-panel__bg1);
+  border-bottom: 1px solid var(--kl-panel-border);
+  font-size: 12px;
+}
+
+.repo {
+  color: var(--kl-text-secondary);
+}
+
+.select,
+.search {
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+.search {
+  width: 180px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.headBtn {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.list {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: auto;
+  font-size: 12px;
+}
+
+.row {
+  border-bottom: 1px solid var(--kl-panel-border);
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 12px 3px 6px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.rowHead:hover:not(:disabled) {
+  background: var(--kl-hover-row);
+}
+
+.rowHead:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.chevronSpacer {
+  display: inline-block;
+  width: 12px;
+}
+
+.time {
+  flex: none;
+  color: var(--kl-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cmd {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--kl-font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opTag {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--kl-hover-row);
+  color: var(--kl-text-secondary);
+  font-size: 10px;
+}
+
+.duration {
+  flex: none;
+  width: 70px;
+  text-align: right;
+  color: var(--kl-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.exitOk,
+.exitBad {
+  flex: none;
+  width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.exitOk {
+  color: var(--kl-green);
+}
+
+.exitBad,
+.failed .cmd {
+  color: var(--kl-red);
+}
+
+.output {
+  margin: 0;
+  padding: 6px 12px 8px 32px;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--kl-input__bg);
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.stderr {
+  color: var(--kl-text-secondary);
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}

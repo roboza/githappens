@@ -1,0 +1,8 @@
+# Build context is the repository root; only these paths are needed.
+*
+!packages/cloud-api/package.json
+!packages/cloud-api/src/**
+!services/cloud/package.json
+!services/cloud/src/**
+!services/cloud/migrations/**
+!services/cloud/openapi.json

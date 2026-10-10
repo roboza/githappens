@@ -1,0 +1,180 @@
+/* ---- UpdateNotifier (bottom-right persistent card, spec 15 §4) ---- */
+
+.notifier {
+  position: fixed;
+  right: var(--kl-space-4);
+  bottom: var(--kl-space-4);
+  width: min(360px, calc(100vw - 32px));
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kl-space-2);
+  padding: var(--kl-space-3);
+  border-radius: 8px;
+  background: var(--kl-panel__bg1);
+  border: 1px solid var(--kl-panel-border);
+  border-left: 3px solid var(--kl-blue);
+  box-shadow: var(--kl-shadow);
+}
+
+.ready {
+  border-left-color: var(--kl-green);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--kl-space-2);
+}
+
+.headText {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.sub {
+  margin: 2px 0 0;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.close {
+  border: none;
+  background: transparent;
+  padding: 0 4px;
+  line-height: 1;
+  color: var(--kl-text-secondary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--kl-space-2);
+}
+
+.bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--kl-btn-bg);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--kl-blue);
+  transition: width 0.2s ease;
+}
+
+/* ---- WhatsNewDialog markdown ---- */
+
+.notes {
+  grid-column: 1 / -1;
+  min-width: 0;
+  line-height: 1.5;
+  user-select: text;
+}
+
+.notes h1,
+.notes h2,
+.notes h3,
+.notes h4 {
+  margin: var(--kl-space-4) 0 var(--kl-space-2);
+  font-size: 14px;
+}
+
+.notes h3,
+.notes h4 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--kl-text-secondary);
+}
+
+.notes > :first-child {
+  margin-top: 0;
+}
+
+.notes ul,
+.notes ol {
+  margin: 0 0 var(--kl-space-2);
+  padding-left: 20px;
+}
+
+.notes li {
+  margin: 2px 0;
+}
+
+.notes p {
+  margin: 0 0 var(--kl-space-2);
+}
+
+.notes code {
+  font-family: var(--kl-font-mono);
+  font-size: 12px;
+  padding: 0 4px;
+  border-radius: var(--kl-radius);
+  background: var(--kl-hover-row);
+}
+
+.notes pre {
+  margin: 0 0 var(--kl-space-2);
+  padding: var(--kl-space-2) var(--kl-space-3);
+  border-radius: var(--kl-radius);
+  background: var(--kl-panel__bg0);
+  border: 1px solid var(--kl-panel-border);
+  overflow: auto;
+}
+
+.notes pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.link {
+  color: var(--kl-link-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- UpdatesPrefsPanel ---- */
+
+.statusLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--kl-space-2);
+  padding: 10px 0;
+  color: var(--kl-text-secondary);
+  font-size: 12px;
+}
+
+.statusError {
+  color: var(--kl-red);
+}
+
+.statusOk {
+  color: var(--kl-green);
+}
+
+/* ---- "Update ready" dot on the app menu / Preferences buttons (spec 15 §4), until restart ---- */
+
+.dotHost {
+  position: relative;
+}
+
+.dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--kl-green);
+  box-shadow: 0 0 0 2px var(--kl-panel__bg1);
+  pointer-events: none;
+}

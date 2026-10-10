@@ -1,0 +1,86 @@
+/* Hide / solo / pin toggles (spec 01 §4.5, spec 04 §4.5) */
+.toggles {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  opacity: 0;
+}
+
+*:hover > .toggles,
+*:focus-within > .toggles,
+.toggles.active {
+  opacity: 1;
+}
+
+.btn {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--kl-text-secondary);
+}
+
+.btn:hover {
+  background: var(--kl-hover-row);
+  color: var(--kl-text-normal);
+}
+
+.btn svg,
+.btn:hover svg {
+  color: inherit;
+}
+
+.btn.hidden,
+.btn.hidden svg {
+  color: var(--kl-text-disabled);
+}
+
+.btn.solo,
+.btn.solo svg {
+  color: var(--kl-orange);
+}
+
+.btn.pinned,
+.btn.pinned svg {
+  color: var(--kl-text-accent);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+  background: var(--kl-btn-bg);
+  white-space: nowrap;
+}
+
+.chip > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.chipSolo {
+  color: var(--kl-orange);
+}
+
+.chipBtn {
+  padding: 1px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--kl-link-color);
+  font-size: 11px;
+}
+
+.chipBtn:hover {
+  background: var(--kl-hover-row);
+}

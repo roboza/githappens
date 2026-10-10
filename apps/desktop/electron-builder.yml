@@ -1,0 +1,133 @@
+# Packaging (spec 15 §6.4–6.5). Signing and notarization are driven entirely by env vars, so local
+# `pnpm dist` builds stay unsigned and CI signs only when the secrets exist (.github/workflows/release.yml):
+#   Windows (Authenticode, PFX):  CSC_LINK / WIN_CSC_LINK (base64 or path) + CSC_KEY_PASSWORD / WIN_CSC_KEY_PASSWORD
+#   Windows (Azure Trusted Signing): AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET in env, plus
+#     win.azureSignOptions (endpoint, certificateProfileName, codeSigningAccountName, publisherName) —
+#     passed by CI as `-c.win.azureSignOptions.*` so unsigned local builds don't try to use it.
+#   macOS (Developer ID):  CSC_LINK + CSC_KEY_PASSWORD (or a keychain identity)
+#   macOS notarization (auto when set): APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID
+#     (or APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER)
+#   Publishing: none — CI builds with --publish never and uploads to R2 (upload-r2.mjs).
+appId: dev.githappens.desktop
+productName: GitHappens
+copyright: Copyright © 2026 GitHappens contributors
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+directories:
+  output: release/${version}
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - '**/*.node'
+  # node-pty's Windows helpers (OpenConsole.exe, conpty.dll, worker scripts) must be on disk
+  - 'node_modules/@lydell/node-pty*/**'
+extraResources:
+  # Bundled portable git (dugite download) → resources/git
+  - from: node_modules/dugite/git
+    to: git
+  # Release notes for the in-app "What's new" view → resources/CHANGELOG.md
+  - from: CHANGELOG.md
+    to: CHANGELOG.md
+  # Init dialog .gitignore / LICENSE templates (spec 03) → resources/templates
+  - from: resources/templates
+    to: templates
+# Native deps ship N-API prebuilds (node-pty, @parcel/watcher); nothing to rebuild per Electron ABI.
+npmRebuild: false
+# x.y.z-preview.N → preview*.yml feed files; plain x.y.z → latest*.yml (spec 15 §6.5). The explicit
+# `publish.channel` below takes precedence over this, so release.yml passes the channel for each build.
+detectUpdateChannel: true
+protocols:
+  - name: GitHappens
+    schemes: [githappens]
+
+win:
+  # App icons: build/icon.svg rasterized to icon.png (1024²), icon.ico and icon.icns.
+  icon: build/icon.ico
+  # `githappens` command: resources\bin is added to the user PATH by build/installer.nsh (spec 15 §6.4).
+  extraResources:
+    - from: build/bin/githappens.cmd
+      to: bin/githappens.cmd
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  # Reject a tampered update whose publisher differs from the running app (only once signed).
+  verifyUpdateCodeSignature: true
+  signtoolOptions:
+    signingHashAlgorithms: [sha256]
+    rfc3161TimeStampServer: http://timestamp.digicert.com
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  deleteAppDataOnUninstall: false
+  differentialPackage: true
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  # customInstall / customUnInstall: add/remove "$INSTDIR\resources\bin" on the user PATH.
+  include: build/installer.nsh
+
+mac:
+  icon: build/icon.icns
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    # zip is what electron-updater downloads on macOS
+    - target: zip
+      arch: [x64, arm64]
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # notarize: unset → electron-builder notarizes automatically when the APPLE_* env vars are present.
+dmg:
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+linux:
+  icon: build/icon.png
+  # Stable binary name inside linux-unpacked / the AppImage (the package name is scoped).
+  executableName: githappens
+  # deb/rpm link /usr/bin/githappens to this launcher (after-install.sh); see also CliInstaller.
+  extraResources:
+    - from: build/bin/githappens
+      to: bin/githappens
+    # Window icon (BrowserWindow `icon`; Linux has no executable icon)
+    - from: build/icon.png
+      to: icon.png
+  # arm64 builds come from native ubuntu-24.04-arm runners (release.yml), so native modules and the
+  # bundled git match the target arch.
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+    - target: rpm
+      arch: [x64, arm64]
+    - target: tar.gz
+      arch: [x64, arm64]
+  category: Development
+  maintainer: GitHappens contributors
+  synopsis: Cross-platform desktop Git client
+  # Only the AppImage updates in place; deb/rpm/tar.gz show a download link (UpdaterService 'manual').
+deb:
+  afterInstall: build/linux/after-install.sh
+  afterRemove: build/linux/after-remove.sh
+rpm:
+  afterInstall: build/linux/after-install.sh
+  afterRemove: build/linux/after-remove.sh
+
+publish:
+  # Generic feed on Cloudflare R2 (docs/releases.md). The source repo is private, so GitHub Releases
+  # can't serve downloads or updates. This URL is the single default for the downloads host: CI swaps
+  # it with `-c.publish.url=<GITHAPPENS_DOWNLOADS_URL>/releases` when that repository variable is set,
+  # and .github/scripts/upload-r2.mjs derives the public base URL from it.
+  provider: generic
+  url: https://downloads.githappens.dev/releases
+  # An explicit channel turns detectUpdateChannel off for the generic provider, so CI passes
+  # `-c.publish.channel=preview` for prerelease versions (preview*.yml); stable builds write latest*.yml.
+  channel: latest

@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.bin binary
+# Windows batch shims (apps/desktop/build/bin/githappens.cmd) are shipped as-is: keep CRLF.
+*.cmd text eol=crlf

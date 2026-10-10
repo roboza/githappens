@@ -1,0 +1,191 @@
+/* Git Flow left-panel section and dialogs (spec 12 §4.9). Rows reuse LeftPanel.module.css. */
+
+.addFlow {
+  color: var(--kl-green);
+}
+
+.addFlow:hover {
+  color: var(--kl-green);
+}
+
+.link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--kl-text-accent);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.notice {
+  margin: 4px 10px 8px 10px;
+  padding: 6px 8px;
+  border-radius: var(--kl-radius);
+  font-size: 12px;
+  background: color-mix(in srgb, var(--kl-orange) 16%, var(--kl-panel__bg1));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.noticeTitle {
+  font-weight: 600;
+}
+
+.noticeStep {
+  color: var(--kl-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.noticeButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.noticeButtons button {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.danger {
+  color: var(--kl-red);
+}
+
+.group {
+  padding-left: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--kl-text-secondary);
+}
+
+.startRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 10px 6px 20px;
+  padding: 0 4px;
+  background: var(--kl-input__bg);
+  border: 1px solid var(--kl-text-accent);
+  border-radius: var(--kl-radius);
+}
+
+.chip {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-family: var(--kl-font-mono);
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+  background: var(--kl-hover-row);
+}
+
+.startRow input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  outline: none;
+}
+
+.startError {
+  margin: -2px 10px 6px 24px;
+  font-size: 11px;
+  color: var(--kl-red);
+}
+
+/* ---- dialogs ---- */
+
+.dialog {
+  width: min(480px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--kl-default-border);
+  border-radius: 12px;
+  background: var(--kl-panel__bg0);
+  color: var(--kl-text-normal);
+  box-shadow: var(--kl-shadow);
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.title {
+  margin: 0;
+  padding: 14px 16px 0;
+  font-size: 15px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.input {
+  width: 100%;
+  font-family: inherit;
+  background: var(--kl-input__bg);
+  border: 1px solid var(--kl-default-border);
+  border-radius: var(--kl-radius);
+  padding: 5px 8px;
+  resize: vertical;
+}
+
+.invalid {
+  border-color: var(--kl-red);
+}
+
+.fieldError {
+  grid-column: 2;
+  margin-top: -4px;
+  font-size: 11px;
+  color: var(--kl-red);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+}
+
+.error {
+  margin: 0;
+  color: var(--kl-red);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.spacer {
+  flex: 1;
+}

@@ -1,0 +1,398 @@
+# Spec 15 §6.6 (2): tag v* → build per OS/arch → sign/notarize (when secrets exist) → merge per-arch
+# update manifests → upload to Cloudflare R2 (the public download host + electron-updater generic feed,
+# docs/releases.md) → also attach everything to a GitHub release in this (private) repo as an internal
+# record. Also called by nightly.yml for the preview channel.
+#
+# Secrets (all optional — builds are left unsigned when absent):
+#   WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD          Windows Authenticode PFX (base64) + password
+#   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET   Azure Trusted Signing service principal
+#     with repo variables AZURE_SIGN_ENDPOINT, AZURE_SIGN_ACCOUNT, AZURE_SIGN_PROFILE, AZURE_SIGN_PUBLISHER
+#   MAC_CSC_LINK, MAC_CSC_KEY_PASSWORD          Developer ID Application .p12 (base64) + password
+#   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID    notarization (notarytool)
+#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY   Cloudflare R2 API token (Object Read & Write)
+#     with R2_BUCKET as a repository variable (or secret). Missing → the R2 upload is skipped with a notice.
+# GH_TOKEN is the workflow's GITHUB_TOKEN (contents: write).
+#
+# Repository variables:
+#   GH_ARM_RUNNERS   `true` builds Windows arm64 (windows-11-arm) and Linux arm64 (ubuntu-24.04-arm) natively;
+#                    `windows` or `linux` enables one. Unset/false: x64 + macOS arm64 only (see "Build matrix").
+#   GITHAPPENS_DOWNLOADS_URL   Public base URL of the R2 bucket. Unset: the default in
+#                    apps/desktop/electron-builder.yml `publish.url` (minus its /releases suffix).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # Manual run from the Actions tab: builds apps/desktop/package.json's version (or the one given).
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to build (e.g. 0.1.0). Defaults to apps/desktop/package.json.
+        type: string
+        required: false
+  workflow_call:
+    inputs:
+      version:
+        description: Version to build (e.g. 0.1.1-preview.20261009). Defaults to package.json.
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.version || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare draft release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      channel: ${{ steps.v.outputs.channel }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build matrix
+        id: matrix
+        # Native runner per OS/arch (spec 15 §6.4): pnpm installs the host's native prebuilds
+        # (@lydell/node-pty, @parcel/watcher) and dugite downloads the host's portable git, so every
+        # package carries binaries for its own arch. The arm64 runners are opt-in with the repository
+        # variable GH_ARM_RUNNERS (Settings › Variables): `true` = Windows + Linux arm64, or `windows` /
+        # `linux` for one of them. GitHub's `windows-11-arm` / `ubuntu-24.04-arm` hosted runners are free
+        # for public repositories only; private repos need arm64 larger runners (then change the labels).
+        shell: bash
+        env:
+          ARM_RUNNERS: ${{ vars.GH_ARM_RUNNERS }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const arm = String(process.env.ARM_RUNNERS || '').trim().toLowerCase();
+          const want = (os) => arm === 'true' || arm.split(/[\s,]+/).includes(os);
+          const include = [
+            { id: 'win-x64', runner: 'windows-latest', arch: 'x64', targets: '--win nsis:x64 zip:x64' },
+            { id: 'mac-x64', runner: 'macos-15-intel', arch: 'x64', targets: '--mac dmg:x64 zip:x64' },
+            { id: 'mac-arm64', runner: 'macos-latest', arch: 'arm64', targets: '--mac dmg:arm64 zip:arm64' },
+            { id: 'linux-x64', runner: 'ubuntu-latest', arch: 'x64', targets: '--linux AppImage:x64 deb:x64 rpm:x64 tar.gz:x64' },
+          ];
+          if (want('windows')) {
+            include.push({ id: 'win-arm64', runner: 'windows-11-arm', arch: 'arm64', targets: '--win nsis:arm64 zip:arm64' });
+          }
+          if (want('linux')) {
+            include.push({ id: 'linux-arm64', runner: 'ubuntu-24.04-arm', arch: 'arm64', targets: '--linux AppImage:arm64 deb:arm64 rpm:arm64 tar.gz:arm64' });
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `matrix=${JSON.stringify({ include })}\n`);
+          console.log(include.map((e) => `${e.id} on ${e.runner}`).join('\n'));
+          EOF
+      - name: Resolve version
+        id: v
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          pkg_version=$(node -p "require('./apps/desktop/package.json').version")
+          version="${INPUT_VERSION:-$pkg_version}"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ -z "$INPUT_VERSION" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match apps/desktop/package.json version ${version}"
+            exit 1
+          fi
+          case "$version" in *-*) prerelease=true ;; *) prerelease=false ;; esac
+          # electron-updater channel: preview*.yml for prereleases, latest*.yml otherwise.
+          channel=latest; [ "$prerelease" = "true" ] && channel=preview
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+      - name: Create draft release (once, so parallel jobs don't race)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            exit 0
+          fi
+          flags=(--draft --title "GitHappens ${TAG#v}" --target "$GITHUB_SHA")
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease --notes "Preview build of \`main\` at ${GITHUB_SHA::7}.")
+          else
+            flags+=(--notes "See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/apps/desktop/CHANGELOG.md).")
+          fi
+          gh release create "$TAG" "${flags[@]}"
+
+  build:
+    name: ${{ matrix.id }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      # From `prepare` (Build matrix): x64 + mac arm64 always; Windows/Linux arm64 when GH_ARM_RUNNERS is set.
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Linux packaging tools
+        if: runner.os == 'Linux'
+        # rpm for the .rpm target; xvfb for the packaged smoke test (not preinstalled on the arm64 image).
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends rpm xvfb
+      - name: Set version
+        shell: bash
+        working-directory: apps/desktop
+        run: npm pkg set version="$VERSION"
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Configure git identity for tests
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests (fast subset)
+        run: pnpm --filter @githappens/desktop exec vitest run test/updater.test.ts test/updater-feed.test.ts test/cli-shims.test.ts test/release-pipeline.test.ts test/ipc.test.ts test/settings-store.test.ts
+      - name: Build
+        run: pnpm build
+      - name: Package and sign
+        shell: bash
+        working-directory: apps/desktop
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGN_ENDPOINT: ${{ vars.AZURE_SIGN_ENDPOINT }}
+          AZURE_SIGN_ACCOUNT: ${{ vars.AZURE_SIGN_ACCOUNT }}
+          AZURE_SIGN_PROFILE: ${{ vars.AZURE_SIGN_PROFILE }}
+          AZURE_SIGN_PUBLISHER: ${{ vars.AZURE_SIGN_PUBLISHER }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TARGETS: ${{ matrix.targets }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          DOWNLOADS_URL: ${{ vars.GITHAPPENS_DOWNLOADS_URL }}
+        run: |
+          # Packages only; assets are uploaded after the packaged smoke test passes.
+          # Empty secrets arrive as empty strings; unset them so electron-builder skips that step gracefully.
+          for v in WIN_CSC_LINK WIN_CSC_KEY_PASSWORD AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET \
+                   MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!v}" ]; then unset "$v"; fi
+          done
+          # Feed: the generic provider in electron-builder.yml; channel (latest/preview) per version, and the
+          # host from the GITHAPPENS_DOWNLOADS_URL repository variable when set.
+          extra=("-c.publish.channel=$CHANNEL")
+          if [ -n "$DOWNLOADS_URL" ]; then extra+=("-c.publish.url=${DOWNLOADS_URL%/}/releases"); fi
+          case "$RUNNER_OS" in
+            Windows)
+              if [ -n "$AZURE_CLIENT_SECRET" ] && [ -n "$AZURE_SIGN_ENDPOINT" ]; then
+                echo "Signing with Azure Trusted Signing"
+                extra+=("-c.win.azureSignOptions.endpoint=$AZURE_SIGN_ENDPOINT"
+                        "-c.win.azureSignOptions.codeSigningAccountName=$AZURE_SIGN_ACCOUNT"
+                        "-c.win.azureSignOptions.certificateProfileName=$AZURE_SIGN_PROFILE"
+                        "-c.win.azureSignOptions.publisherName=$AZURE_SIGN_PUBLISHER")
+              elif [ -n "$WIN_CSC_LINK" ]; then
+                echo "Signing with Authenticode certificate"
+              else
+                echo "::warning::No Windows signing secrets — building unsigned"
+                extra+=("-c.win.verifyUpdateCodeSignature=false")
+              fi
+              ;;
+            macOS)
+              if [ -n "$MAC_CSC_LINK" ]; then
+                export CSC_LINK="$MAC_CSC_LINK" CSC_KEY_PASSWORD="${MAC_CSC_KEY_PASSWORD:-}"
+                if [ -z "$APPLE_ID" ] || [ -z "$APPLE_APP_SPECIFIC_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+                  echo "::warning::Apple notarization secrets missing — signed but not notarized"
+                  extra+=("-c.mac.notarize=false")
+                fi
+              else
+                echo "::warning::No macOS signing secrets — ad-hoc signed, not notarized"
+                export CSC_IDENTITY_AUTO_DISCOVERY=false
+                # Apple Silicon refuses to run unsigned code; an ad-hoc signature lets the app start
+                # (users still clear the quarantine flag or use right-click → Open on first launch).
+                extra+=("-c.mac.identity=-" "-c.mac.hardenedRuntime=false" "-c.mac.notarize=false")
+              fi
+              ;;
+          esac
+          # shellcheck disable=SC2086 # TARGETS is a word list on purpose
+          pnpm exec electron-builder --config electron-builder.yml $TARGETS --publish never "${extra[@]}"
+      - name: Locate the unpacked app
+        id: unpacked
+        shell: bash
+        working-directory: apps/desktop
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          out="release/$VERSION"
+          # electron-builder names the x64 dir without an arch suffix: win-unpacked / mac / linux-unpacked.
+          suffix=""; [ "$ARCH" = "arm64" ] && suffix="-arm64"
+          case "$RUNNER_OS" in
+            Windows) dir="$out/win$suffix-unpacked"; exe="$dir/GitHappens.exe"; res="$dir/resources" ;;
+            macOS)   dir="$out/mac$suffix/GitHappens.app"; exe="$dir/Contents/MacOS/GitHappens"; res="$dir/Contents/Resources" ;;
+            Linux)   dir="$out/linux$suffix-unpacked"; exe="$dir/githappens"; res="$dir/resources" ;;
+          esac
+          echo "Packaged executable: $exe"
+          test -x "$exe"
+          echo "exe=$PWD/$exe" >> "$GITHUB_OUTPUT"
+          echo "resources=$PWD/$res" >> "$GITHUB_OUTPUT"
+      - name: Verify native modules and bundled git match the target arch
+        shell: bash
+        run: |
+          node .github/scripts/check-package-arch.mjs "${{ steps.unpacked.outputs.resources }}" "${{ matrix.arch }}"
+          # The `githappens` CLI shim ships per platform (spec 15 §6.4).
+          case "$RUNNER_OS" in
+            Windows) test -f "${{ steps.unpacked.outputs.resources }}/bin/githappens.cmd" ;;
+            Linux)   test -f "${{ steps.unpacked.outputs.resources }}/bin/githappens" ;;
+          esac
+      - name: Smoke-test the packaged app
+        shell: bash
+        working-directory: apps/desktop
+        run: |
+          # packaged.spec.ts strips every git from PATH for the app (spec 15 §3: no prerequisites).
+          export GH_PACKAGED_APP="${{ steps.unpacked.outputs.exe }}"
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run --auto-servernum pnpm exec playwright test e2e/packaged.spec.ts
+          else
+            pnpm exec playwright test e2e/packaged.spec.ts
+          fi
+      - name: Upload to the draft release (internal record)
+        shell: bash
+        working-directory: apps/desktop/release/${{ env.VERSION }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          shopt -s nullglob
+          files=(*.exe *.zip *.dmg *.AppImage *.deb *.rpm *.tar.gz *.blockmap)
+          ls -l "${files[@]}"
+          gh release upload "$TAG" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+      - name: Collect update manifests
+        shell: bash
+        run: |
+          mkdir -p manifests
+          cp apps/desktop/release/"$VERSION"/*.yml manifests/ 2>/dev/null || true
+          rm -f manifests/builder-debug.yml
+          ls -l manifests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifest-${{ matrix.id }}
+          path: manifests/*.yml
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.id }}
+          path: |
+            apps/desktop/release/${{ env.VERSION }}/*.exe
+            apps/desktop/release/${{ env.VERSION }}/*.zip
+            apps/desktop/release/${{ env.VERSION }}/*.dmg
+            apps/desktop/release/${{ env.VERSION }}/*.AppImage
+            apps/desktop/release/${{ env.VERSION }}/*.deb
+            apps/desktop/release/${{ env.VERSION }}/*.rpm
+            apps/desktop/release/${{ env.VERSION }}/*.tar.gz
+            apps/desktop/release/${{ env.VERSION }}/*.blockmap
+            apps/desktop/release/${{ env.VERSION }}/*.yml
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Merge manifests and publish
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-*
+          path: manifests
+      - name: Merge per-arch manifests (latest.yml, latest-mac.yml, preview*.yml …)
+        shell: bash
+        run: |
+          # Windows x64+arm64 share latest.yml and both macOS builds share latest-mac.yml: their `files:`
+          # lists are merged (tested in apps/desktop/test/release-pipeline.test.ts). Linux arm64 has its
+          # own latest-linux-arm64.yml.
+          node .github/scripts/merge-update-manifests.mjs manifests merged
+          for f in merged/*.yml; do echo "--- $f"; cat "$f"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: update-manifests
+          path: merged/*.yml
+          if-no-files-found: error
+      - name: Upload merged manifests
+        run: gh release upload "$TAG" merged/*.yml --clobber --repo "$GITHUB_REPOSITORY"
+      - name: Publish release
+        shell: bash
+        run: |
+          flags=(--draft=false)
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release edit "$TAG" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
+
+  r2:
+    name: Upload to Cloudflare R2
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      CHANNEL: ${{ needs.prepare.outputs.channel }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ vars.R2_BUCKET || secrets.R2_BUCKET }}
+      GITHAPPENS_DOWNLOADS_URL: ${{ vars.GITHAPPENS_DOWNLOADS_URL }}
+    steps:
+      - name: Check R2 configuration
+        id: cfg
+        shell: bash
+        run: |
+          missing=()
+          for v in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET; do
+            if [ -z "${!v}" ]; then missing+=("$v"); fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::notice title=R2 upload skipped::${missing[*]} not configured (docs/releases.md) — the build succeeded but nothing was published to the download host."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          sparse-checkout: |
+            .github/scripts
+            apps/desktop/electron-builder.yml
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v4
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        if: steps.cfg.outputs.enabled == 'true'
+        with:
+          name: update-manifests
+          path: manifests
+      - name: Plan the upload
+        if: steps.cfg.outputs.enabled == 'true'
+        run: node .github/scripts/upload-r2.mjs --version "$VERSION" --channel "$CHANNEL" --dist dist --manifests manifests --dry-run
+      - name: Upload (artifacts → fixed-name copies → version.json → channel manifests)
+        if: steps.cfg.outputs.enabled == 'true'
+        # The AWS CLI is preinstalled on GitHub's Ubuntu runners; upload-r2.mjs hands it the R2
+        # credentials through the environment and uploads the channel manifests last.
+        run: node .github/scripts/upload-r2.mjs --version "$VERSION" --channel "$CHANNEL" --dist dist --manifests manifests

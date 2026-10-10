@@ -1,0 +1,38 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  padding: 0 4px;
+  border: 1px solid var(--kl-default-border);
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 0.04em;
+  color: var(--kl-text-secondary);
+}
+
+.ours {
+  color: var(--kl-text-accent);
+}
+
+.theirs {
+  color: var(--kl-red);
+}
+
+.lockRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+}
+
+.lockRow + .lockRow {
+  border-top: 1px solid var(--kl-panel-border);
+}
+
+.lockRow button {
+  font-size: 12px;
+  padding: 1px 8px;
+}

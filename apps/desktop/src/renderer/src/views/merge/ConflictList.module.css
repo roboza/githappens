@@ -1,0 +1,133 @@
+.section {
+  border-bottom: 1px solid var(--kl-panel-border);
+  padding-bottom: 6px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 2px 14px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--kl-orange);
+}
+
+.hint {
+  margin: 0 0 4px;
+  padding: 0 10px 0 14px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 14px;
+  white-space: nowrap;
+  min-width: 0;
+  cursor: default;
+  font-size: 12px;
+}
+
+.row:hover {
+  background: var(--kl-hover-row);
+}
+
+.row:focus-visible {
+  outline: 1px solid var(--kl-text-accent);
+  outline-offset: -1px;
+}
+
+.active {
+  background: var(--kl-selected-row);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  color: var(--kl-orange);
+  flex: none;
+}
+
+.name {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dir {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--kl-text-secondary);
+}
+
+.code {
+  flex: none;
+  font-family: var(--kl-font-mono);
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: var(--kl-orange);
+  border: 1px solid color-mix(in srgb, var(--kl-orange) 50%, transparent);
+}
+
+.actions {
+  display: none;
+  gap: 2px;
+  flex: none;
+}
+
+.row:hover .actions,
+.row:focus-within .actions {
+  display: inline-flex;
+}
+
+.row:hover .code,
+.row:focus-within .code {
+  display: none;
+}
+
+.actions button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  padding: 0 5px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.chunks {
+  flex: none;
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 8px;
+  color: var(--kl-text-secondary);
+  background: color-mix(in srgb, var(--kl-orange) 14%, transparent);
+}
+
+.chunksDone {
+  color: var(--kl-green);
+  background: color-mix(in srgb, var(--kl-green) 14%, transparent);
+}
+
+.resolvedRow {
+  color: var(--kl-text-secondary);
+}
+
+.resolvedRow .icon {
+  color: var(--kl-green);
+}
+
+.subheader {
+  padding: 4px 10px 2px 14px;
+  font-size: 11px;
+  color: var(--kl-text-secondary);
+}

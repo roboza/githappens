@@ -1,0 +1,17 @@
+node_modules/
+out/
+dist/
+release/
+coverage/
+.turbo/
+*.log
+.DS_Store
+# generated fixture repos
+test/fixtures/.repos/
+test-results/
+playwright-report/
+# benchmark output (pnpm bench)
+bench-results/
+
+# advisory lock used by parallel e2e runs
+.e2e-lock/
