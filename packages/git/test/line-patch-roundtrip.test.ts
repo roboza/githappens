@@ -249,7 +249,8 @@ describeGit('buildLinePatch round-trip with git apply', () => {
     }
 
     console.info(`line-patch round-trip seed=${SEED}`, stats);
-  });
+    // ~1070 files written, staged and diffed: ~30 s alone on Windows, well over 60 s on a busy CI runner.
+  }, 300_000);
 });
 
 function rawSplit(text: string): string[] {

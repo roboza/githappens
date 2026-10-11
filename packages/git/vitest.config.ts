@@ -9,9 +9,10 @@ export default defineConfig({
     maxWorkers: Math.max(2, Math.floor(availableParallelism() / 3)),
     include: ['test/**/*.test.ts'],
     // Integration tests spawn many real git processes; under parallel turbo runs on Windows
-    // individual tests can take far longer than when run alone.
-    testTimeout: 60_000,
-    hookTimeout: 60_000,
+    // individual tests can take far longer than when run alone (several take 20–35 s locally, and the
+    // hosted Windows runner is a few times slower than that).
+    testTimeout: process.env.CI ? 180_000 : 60_000,
+    hookTimeout: process.env.CI ? 180_000 : 60_000,
     // Spec 15 §7.4 quality gate: `pnpm test:coverage` (turbo task `test:coverage`).
     coverage: {
       provider: 'v8',
