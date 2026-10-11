@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/roboza/githappens/actions/workflows/ci.yml/badge.svg)](https://github.com/roboza/githappens/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/roboza/githappens?include_prereleases&label=release)](https://github.com/roboza/githappens/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A cross-platform desktop Git client built around a fast, interactive commit graph. Electron, React and
 TypeScript on the outside, the real Git command line doing the work underneath.
@@ -246,4 +246,4 @@ CI must pass on all three operating systems before merging.
 
 ## License
 
-[MIT](LICENSE) © 2026 Robert Oswald and GitHappens contributors.
+[Apache License 2.0](LICENSE). Copyright 2026 Robert Oswald and GitHappens contributors; see [NOTICE](NOTICE).
