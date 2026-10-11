@@ -76,7 +76,12 @@ export async function wipSnapshot(
   const tmpIndex = path.join(dir, 'index');
   try {
     const realIndex = path.join(info.gitDir, 'index');
-    if (fs.existsSync(realIndex)) fs.copyFileSync(realIndex, tmpIndex);
+    if (fs.existsSync(realIndex)) {
+      // keep the original mtime: git's racy-clean check compares entries against the index file's mtime
+      const st = fs.statSync(realIndex);
+      fs.copyFileSync(realIndex, tmpIndex);
+      fs.utimesSync(tmpIndex, st.atime, st.mtime);
+    }
     const env = { GIT_INDEX_FILE: tmpIndex, ...WIP_IDENTITY };
     const opts = { env, priority: 'background' as const, timeoutMs };
     if (!fs.existsSync(tmpIndex)) await svc.runRead(['read-tree', headSha], opts);

@@ -310,6 +310,23 @@ describeGit('Cloud Patches: PatchService (spec 14 §6.3)', () => {
     expect(o.bundle.patch).toContain('GIT binary patch');
   });
 
+  it('includes a same-size edit that only the racy-clean check of git can see', async () => {
+    const r = await repos.make({ 'a.txt': 'one\n' });
+    const file = path.join(r.dir, 'a.txt');
+    const past = new Date(Math.floor(Date.now() / 1000) * 1000 - 120_000);
+    fs.utimesSync(file, past, past);
+    r.git('update-index', '--refresh');
+    // same size and mtime as the cached entry, and the index was written in that same second
+    fs.writeFileSync(file, 'ONE\n');
+    fs.utimesSync(file, past, past);
+    fs.utimesSync(path.join(r.dir, '.git', 'index'), past, past);
+    const draft = await makeService(new FakeCloud(), [r]).preview(r.svc.repo.id, {
+      kind: 'wip',
+      stagedOnly: false,
+    });
+    expect(draft.files.map((f) => f.path)).toEqual(['a.txt']);
+  });
+
   it('shares a commit (format-patch) and a stash incl. untracked files', async () => {
     const r = await repos.make({ 'a.txt': 'one\n' });
     r.write('a.txt', 'one\ntwo\n');
