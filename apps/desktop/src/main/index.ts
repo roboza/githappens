@@ -105,6 +105,11 @@ const isDev = !app.isPackaged && !!process.env.ELECTRON_RENDERER_URL;
 
 // Isolated profile directory for tests and side-by-side dev instances.
 if (process.env.GITHAPPENS_USER_DATA_DIR) app.setPath('userData', process.env.GITHAPPENS_USER_DATA_DIR);
+// Linux secret backend override (e.g. `gnome-libsecret`). Playwright's Electron loader forces
+// `--password-store=basic`, which safeStorage reports as `basic_text`; e2e on CI re-selects the keyring.
+if (process.env.GITHAPPENS_PASSWORD_STORE) {
+  app.commandLine.appendSwitch('password-store', process.env.GITHAPPENS_PASSWORD_STORE);
+}
 
 // Custom schemes must be registered once, before `ready` (avatars: spec 10; revisions: spec 07).
 protocol.registerSchemesAsPrivileged([AVATAR_SCHEME_PRIVILEGES, REVISION_SCHEME_PRIVILEGES]);

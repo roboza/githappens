@@ -356,6 +356,12 @@ export function TerminalView({
           e.preventDefault();
           return false;
         }
+        const pick = open.items[open.index];
+        if (e.key === 'Enter' && pick && !pick.insert && !pick.deleteBefore) {
+          // The word is already complete (e.g. `git status`): accepting is a no-op, so run the command.
+          showAc(null);
+          return true;
+        }
         if (e.key === 'Tab' || e.key === 'Enter') {
           acceptRef.current(open.index);
           e.preventDefault();
