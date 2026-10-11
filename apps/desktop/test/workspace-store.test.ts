@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { canonicalPath } from '../src/main/services/canonical-path';
 import type { Workspace } from '../src/shared/ipc/workspaces-contract';
 import { WorkspaceStore } from '../src/main/workspaces/workspace-store';
 
@@ -96,7 +97,8 @@ describe('WorkspaceStore (spec 11 §7 step 2)', () => {
     const removed = s.removeRepos(w.id, [after.repos[0]!.id]);
     expect(removed.repos.map((r) => r.name)).toEqual(['Two', 'api']);
     const located = s.setRepoPath(w.id, removed.repos[1]!.id, path.join(dir, 'api'), 'https://x/acme/api');
-    expect(path.resolve(located.localPath)).toBe(path.resolve(path.join(dir, 'api')));
+    // The store stores real paths (macOS /tmp → /private/tmp, Windows 8.3 names like RUNNER~1 expanded).
+    expect(located.localPath).toBe(canonicalPath(path.join(dir, 'api')));
     expect(located.remoteUrl).toBe('https://x/acme/api');
   });
 

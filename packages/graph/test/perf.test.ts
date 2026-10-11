@@ -30,6 +30,12 @@ function synthetic(n: number): GraphCommitInput[] {
   return out;
 }
 
+// Strict ceilings only in dedicated benchmark runs (GRAPH_BENCH=1); in the normal test run other
+// packages compete for the CPU, so timings get 5x slack (10x on hosted CI runners, where macOS is
+// notably slower) and the 1M case (≈1 GB) is skipped.
+const heavy = process.env.GRAPH_BENCH === '1';
+const slack = heavy ? 1 : process.env.CI ? 10 : 5;
+
 describe('performance', () => {
   it('lays out 100k commits in < 1500 ms (streamed in 5,000-commit pages)', () => {
     const commits = synthetic(100_000);
@@ -69,9 +75,7 @@ describe('performance', () => {
       `layout ${m.rowCount} rows: ${layoutMs.toFixed(0)} ms, maxColumn ${m.maxColumn}; reach ${reachMs.toFixed(1)} ms; draw ${frameMs.toFixed(3)} ms/frame`,
     );
     expect(m.rowCount).toBe(100_001);
-    // macOS runners are measurably slower than the original local threshold; keep a CI-friendly bound
-    // that still catches genuine regressions without flaking on slower machines.
-    expect(layoutMs).toBeLessThan(2000);
+    expect(layoutMs).toBeLessThan(1500 * slack);
     expect(reachMs).toBeLessThan(100);
     expect(frameMs).toBeLessThan(8);
   });
@@ -97,11 +101,6 @@ function layoutPaged(commits: GraphCommitInput[], page = 5000) {
   m.finish();
   return { m, firstPageMs, totalMs: performance.now() - t0 };
 }
-
-// Strict ceilings only in dedicated benchmark runs (GRAPH_BENCH=1); in the normal test run other
-// packages compete for the CPU, so timings get 5x slack and the 1M case (≈1 GB) is skipped.
-const heavy = process.env.GRAPH_BENCH === '1';
-const slack = heavy ? 1 : 5;
 
 describe('benchmarks', () => {
   it('200k commits: first page and full layout', () => {

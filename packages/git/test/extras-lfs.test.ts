@@ -109,12 +109,13 @@ describeGit('LFS (fixtures)', () => {
 
     await runExtra(svc, { type: 'lfs.track', patterns: ['*.psd', 'my dir/*.zip'] });
     st = await lfsStatus(svc);
-    expect(st.tracked.map((t) => t.pattern)).toEqual(['*.bin', '*.psd', 'my[[:space:]]dir/*.zip']);
+    // git-lfs versions differ in the order they append patterns to .gitattributes.
+    expect(st.tracked.map((t) => t.pattern).sort()).toEqual(['*.bin', '*.psd', 'my[[:space:]]dir/*.zip']);
     expect(h.git(fx.path, 'status', '--porcelain')).toMatch(/\.gitattributes/);
 
     await runExtra(svc, { type: 'lfs.untrack', patterns: ['*.bin'] });
     st = await lfsStatus(svc);
-    expect(st.tracked.map((t) => t.pattern)).toEqual(['*.psd', 'my[[:space:]]dir/*.zip']);
+    expect(st.tracked.map((t) => t.pattern).sort()).toEqual(['*.psd', 'my[[:space:]]dir/*.zip']);
   });
 
   it('installs LFS into a plain repo', async (ctx) => {

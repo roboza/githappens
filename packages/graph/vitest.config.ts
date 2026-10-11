@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['test/**/*.test.ts'],
-    testTimeout: 30_000,
+    testTimeout: 120_000,
     // Spec 15 §7.4 quality gate: `pnpm test:coverage` (turbo task `test:coverage`).
     coverage: {
       provider: 'v8',
