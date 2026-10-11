@@ -1,7 +1,8 @@
-# Spec 15 §6.6 (2): tag v* → build per OS/arch → sign/notarize (when secrets exist) → merge per-arch
-# update manifests → upload to Cloudflare R2 (the public download host + electron-updater generic feed,
-# docs/releases.md) → also attach everything to a GitHub release in this (private) repo as an internal
-# record. Also called by nightly.yml for the preview channel.
+# Spec 15 §6.6 (2): tag v* → build per OS/arch → sign/notarize (when secrets exist) → upload to a draft
+# GitHub release → merge per-arch update manifests → publish the release. GitHub Releases are the public
+# download host and the electron-updater feed (provider: github in apps/desktop/electron-builder.yml,
+# docs/releases.md): stable versions become normal releases (marked latest), preview versions
+# (x.y.z-preview.N) become prereleases. Also called by nightly.yml for the preview channel.
 #
 # Secrets (all optional — builds are left unsigned when absent):
 #   WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD          Windows Authenticode PFX (base64) + password
@@ -9,15 +10,11 @@
 #     with repo variables AZURE_SIGN_ENDPOINT, AZURE_SIGN_ACCOUNT, AZURE_SIGN_PROFILE, AZURE_SIGN_PUBLISHER
 #   MAC_CSC_LINK, MAC_CSC_KEY_PASSWORD          Developer ID Application .p12 (base64) + password
 #   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID    notarization (notarytool)
-#   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY   Cloudflare R2 API token (Object Read & Write)
-#     with R2_BUCKET as a repository variable (or secret). Missing → the R2 upload is skipped with a notice.
-# GH_TOKEN is the workflow's GITHUB_TOKEN (contents: write).
+# GH_TOKEN is the workflow's GITHUB_TOKEN; `contents: write` is all the release steps need.
 #
 # Repository variables:
 #   GH_ARM_RUNNERS   `true` builds Windows arm64 (windows-11-arm) and Linux arm64 (ubuntu-24.04-arm) natively;
 #                    `windows` or `linux` enables one. Unset/false: x64 + macOS arm64 only (see "Build matrix").
-#   GITHAPPENS_DOWNLOADS_URL   Public base URL of the R2 bucket. Unset: the default in
-#                    apps/desktop/electron-builder.yml `publish.url` (minus its /releases suffix).
 name: Release
 
 on:
@@ -182,7 +179,6 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TARGETS: ${{ matrix.targets }}
           CHANNEL: ${{ needs.prepare.outputs.channel }}
-          DOWNLOADS_URL: ${{ vars.GITHAPPENS_DOWNLOADS_URL }}
         run: |
           # Packages only; assets are uploaded after the packaged smoke test passes.
           # Empty secrets arrive as empty strings; unset them so electron-builder skips that step gracefully.
@@ -190,10 +186,9 @@ jobs:
                    MAC_CSC_LINK MAC_CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
             if [ -z "${!v}" ]; then unset "$v"; fi
           done
-          # Feed: the generic provider in electron-builder.yml; channel (latest/preview) per version, and the
-          # host from the GITHAPPENS_DOWNLOADS_URL repository variable when set.
+          # Feed: the github provider in electron-builder.yml. It ignores detectUpdateChannel, so the channel
+          # is passed explicitly: preview versions write preview*.yml, stable ones latest*.yml.
           extra=("-c.publish.channel=$CHANNEL")
-          if [ -n "$DOWNLOADS_URL" ]; then extra+=("-c.publish.url=${DOWNLOADS_URL%/}/releases"); fi
           case "$RUNNER_OS" in
             Windows)
               if [ -n "$AZURE_CLIENT_SECRET" ] && [ -n "$AZURE_SIGN_ENDPOINT" ]; then
@@ -266,13 +261,15 @@ jobs:
           else
             pnpm exec playwright test e2e/packaged.spec.ts
           fi
-      - name: Upload to the draft release (internal record)
+      - name: Upload to the draft release
         shell: bash
         working-directory: apps/desktop/release/${{ env.VERSION }}
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.prepare.outputs.tag }}
         run: |
+          # Version-less names (GitHappens-Setup-x64.exe, GitHappens-mac-arm64.dmg …; electron-builder.yml
+          # artifactName), unique per OS/arch, so parallel jobs never overwrite each other's assets.
           shopt -s nullglob
           files=(*.exe *.zip *.dmg *.AppImage *.deb *.rpm *.tar.gz *.blockmap)
           ls -l "${files[@]}"
@@ -338,61 +335,9 @@ jobs:
         run: gh release upload "$TAG" merged/*.yml --clobber --repo "$GITHUB_REPOSITORY"
       - name: Publish release
         shell: bash
+        # Stable → a normal release marked latest (/releases/latest/download/<name> and the stable feed);
+        # preview → a prerelease, seen only by clients on the Preview channel (allowPrerelease).
         run: |
           flags=(--draft=false)
           if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release edit "$TAG" "${flags[@]}" --repo "$GITHUB_REPOSITORY"
-
-  r2:
-    name: Upload to Cloudflare R2
-    needs: [prepare, publish]
-    runs-on: ubuntu-latest
-    env:
-      VERSION: ${{ needs.prepare.outputs.version }}
-      CHANNEL: ${{ needs.prepare.outputs.channel }}
-      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      R2_BUCKET: ${{ vars.R2_BUCKET || secrets.R2_BUCKET }}
-      GITHAPPENS_DOWNLOADS_URL: ${{ vars.GITHAPPENS_DOWNLOADS_URL }}
-    steps:
-      - name: Check R2 configuration
-        id: cfg
-        shell: bash
-        run: |
-          missing=()
-          for v in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET; do
-            if [ -z "${!v}" ]; then missing+=("$v"); fi
-          done
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "::notice title=R2 upload skipped::${missing[*]} not configured (docs/releases.md) — the build succeeded but nothing was published to the download host."
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/checkout@v4
-        if: steps.cfg.outputs.enabled == 'true'
-        with:
-          sparse-checkout: |
-            .github/scripts
-            apps/desktop/electron-builder.yml
-          sparse-checkout-cone-mode: false
-      - uses: actions/download-artifact@v4
-        if: steps.cfg.outputs.enabled == 'true'
-        with:
-          pattern: dist-*
-          path: dist
-          merge-multiple: true
-      - uses: actions/download-artifact@v4
-        if: steps.cfg.outputs.enabled == 'true'
-        with:
-          name: update-manifests
-          path: manifests
-      - name: Plan the upload
-        if: steps.cfg.outputs.enabled == 'true'
-        run: node .github/scripts/upload-r2.mjs --version "$VERSION" --channel "$CHANNEL" --dist dist --manifests manifests --dry-run
-      - name: Upload (artifacts → fixed-name copies → version.json → channel manifests)
-        if: steps.cfg.outputs.enabled == 'true'
-        # The AWS CLI is preinstalled on GitHub's Ubuntu runners; upload-r2.mjs hands it the R2
-        # credentials through the environment and uploads the channel manifests last.
-        run: node .github/scripts/upload-r2.mjs --version "$VERSION" --channel "$CHANNEL" --dist dist --manifests manifests

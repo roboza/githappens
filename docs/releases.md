@@ -1,159 +1,114 @@
 # Releases and downloads
 
-The source repository is private, so GitHub Releases can't serve public downloads or auto-updates.
-Installers and the auto-update feed are hosted on **Cloudflare R2** instead and served at
-**`https://downloads.githappens.dev`** (an R2 custom domain). The website
-([githappens.dev](https://githappens.dev/#download)) links the fixed-name files below.
+Installers and the auto-update feed are hosted on **GitHub Releases** of
+[`roboza/githappens`](https://github.com/roboza/githappens/releases). The website
+([githappens.dev](https://githappens.dev/#download)) links the newest stable files through
+`https://github.com/roboza/githappens/releases/latest/download/<file>`, which works because every
+release uses the same, version-less file names.
 
-GitHub Actions still attaches every build to a GitHub release in the private repo. That release is
-only an internal record; nothing user-facing depends on it.
+> **While the repository is private**, release assets are only visible to signed-in users with access
+> to the repository. The website buttons return 404 for everyone else, and installed apps can't check
+> for or download updates (the check ends in an error status in _Preferences → Updates_). Everything works once the repository is public; no
+> config change is needed.
 
-## Bucket layout
+## Release layout
+
+Each release is tagged `v<version>` (`v0.2.0`, or `v0.2.1-preview.20261010` for nightlies) and
+carries:
 
 ```
-releases/                          electron-updater generic feed (stable + preview)
-  GitHappens-Setup-<v>-x64.exe       Windows installer (+ .exe.blockmap for differential updates)
-  GitHappens-Setup-<v>-arm64.exe     (only when Windows arm64 is built, see GH_ARM_RUNNERS)
-  GitHappens-<v>-win-<arch>.zip      Windows portable zip
-  GitHappens-<v>-mac-<arch>.dmg      macOS disk image, x64 + arm64 (+ .dmg.blockmap)
-  GitHappens-<v>-mac-<arch>.zip      macOS zip, used by the updater (+ .zip.blockmap)
-  GitHappens-<v>-linux-x86_64.AppImage
-  GitHappens-<v>-linux-amd64.deb
-  GitHappens-<v>-linux-x86_64.rpm
-  GitHappens-<v>-linux-x64.tar.gz
-  GitHappens-<v>-linux-arm64.AppImage / -arm64.deb / -aarch64.rpm / -arm64.tar.gz   (Linux arm64)
-  latest.yml  latest-mac.yml  latest-linux.yml  latest-linux-arm64.yml      stable channel manifests
-  preview.yml preview-mac.yml preview-linux.yml preview-linux-arm64.yml     preview channel manifests
-latest/                            fixed-name copies of the newest STABLE build
-  GitHappens-Setup-x64.exe   GitHappens-Setup-arm64.exe
-  GitHappens-win-x64.zip     GitHappens-win-arm64.zip
-  GitHappens-mac-arm64.dmg   GitHappens-mac-x64.dmg
-  GitHappens-mac-arm64.zip   GitHappens-mac-x64.zip
-  GitHappens-linux-x86_64.AppImage   GitHappens-linux-arm64.AppImage
-  GitHappens-linux-amd64.deb         GitHappens-linux-arm64.deb
-  GitHappens-linux-x86_64.rpm        GitHappens-linux-aarch64.rpm
-  GitHappens-linux-x64.tar.gz        GitHappens-linux-arm64.tar.gz
-  version.json
-preview/                           the same fixed names for the newest nightly (preview) build
+GitHappens-Setup-x64.exe   GitHappens-Setup-arm64.exe     Windows installer (+ .exe.blockmap)
+GitHappens-win-x64.zip     GitHappens-win-arm64.zip       Windows portable zip
+GitHappens-mac-arm64.dmg   GitHappens-mac-x64.dmg         macOS disk image (+ .dmg.blockmap)
+GitHappens-mac-arm64.zip   GitHappens-mac-x64.zip         macOS zip, used by the updater (+ .zip.blockmap)
+GitHappens-linux-x86_64.AppImage   GitHappens-linux-arm64.AppImage
+GitHappens-linux-amd64.deb         GitHappens-linux-arm64.deb
+GitHappens-linux-x86_64.rpm        GitHappens-linux-aarch64.rpm
+GitHappens-linux-x64.tar.gz        GitHappens-linux-arm64.tar.gz
+latest.yml  latest-mac.yml  latest-linux.yml  latest-linux-arm64.yml      stable releases
+preview.yml preview-mac.yml preview-linux.yml preview-linux-arm64.yml     preview (pre)releases
 ```
 
-`<v>` is the version (`0.2.0`, or `0.2.1-preview.20261010` for nightlies). The fixed name is the
-versioned name with `-<v>` removed, so the arch spelling is whatever electron-builder uses for that
-format (`x86_64`/`amd64`/`x64`, `arm64`/`aarch64`). arm64 Windows and Linux files only exist when the
-`GH_ARM_RUNNERS` repository variable enables those runners.
+The names come from `artifactName` in `apps/desktop/electron-builder.yml`. They contain no version,
+and the arch spelling is whatever electron-builder uses for that format (`x86_64`/`amd64`/`x64`,
+`arm64`/`aarch64`). arm64 Windows and Linux files only exist when the `GH_ARM_RUNNERS` repository
+variable enables those runners.
 
-Both channels share `releases/`. electron-updater reads `<channel>[-mac|-linux|-linux-arm64].yml` from
-the feed URL in `apps/desktop/electron-builder.yml` (`publish.url`, baked into the app as
-`app-update.yml`); the app's Stable/Preview setting picks `latest` or `preview`. Preview users read
-only `preview*.yml`. Each nightly is versioned one patch above `apps/desktop/package.json`, so it is
-always newer than the last stable release.
+Stable download links (what the website uses):
 
-### version.json
+| File                | URL                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Windows installer   | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-Setup-x64.exe`         |
+| macOS Apple Silicon | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-mac-arm64.dmg`         |
+| macOS Intel         | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-mac-x64.dmg`           |
+| Linux AppImage      | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-linux-x86_64.AppImage` |
+| Linux deb           | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-linux-amd64.deb`       |
+| Linux rpm           | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-linux-x86_64.rpm`      |
+| Linux tar.gz        | `https://github.com/roboza/githappens/releases/latest/download/GitHappens-linux-x64.tar.gz`      |
 
-`latest/version.json` (and `preview/version.json`) describe the files in that folder, for a website
-that wants to show the version or build its buttons:
+`/releases/latest` is the newest release that is neither a draft nor a prerelease, so nightlies never
+replace these files. A specific version is at `/releases/download/v<version>/<file>`.
 
-```json
-{
-  "version": "0.2.0",
-  "channel": "latest",
-  "date": "2026-10-10T03:00:00.000Z",
-  "files": {
-    "linux-x64-appimage": "https://downloads.githappens.dev/latest/GitHappens-linux-x86_64.AppImage",
-    "linux-x64-deb": "https://downloads.githappens.dev/latest/GitHappens-linux-amd64.deb",
-    "linux-x64-rpm": "https://downloads.githappens.dev/latest/GitHappens-linux-x86_64.rpm",
-    "linux-x64-tar.gz": "https://downloads.githappens.dev/latest/GitHappens-linux-x64.tar.gz",
-    "mac-arm64-dmg": "https://downloads.githappens.dev/latest/GitHappens-mac-arm64.dmg",
-    "mac-arm64-zip": "https://downloads.githappens.dev/latest/GitHappens-mac-arm64.zip",
-    "mac-x64-dmg": "https://downloads.githappens.dev/latest/GitHappens-mac-x64.dmg",
-    "mac-x64-zip": "https://downloads.githappens.dev/latest/GitHappens-mac-x64.zip",
-    "windows-x64-exe": "https://downloads.githappens.dev/latest/GitHappens-Setup-x64.exe",
-    "windows-x64-zip": "https://downloads.githappens.dev/latest/GitHappens-win-x64.zip"
-  }
-}
-```
+## Stable vs preview
 
-Keys are `<windows|mac|linux>-<x64|arm64>-<exe|zip|dmg|appimage|deb|rpm|tar.gz>`. Only files that were
-built are listed: with arm64 runners enabled, `windows-arm64-exe`, `linux-arm64-deb` and the rest
-appear too. A stale fixed-name file from an older release (for example after arm64 builds are turned
-off) stays in the bucket but drops out of `version.json`.
+|                  | Stable                           | Preview                                           |
+| ---------------- | -------------------------------- | ------------------------------------------------- |
+| Version          | `X.Y.Z`                          | `X.Y.Z-preview.YYYYMMDD` (any version with a `-`) |
+| GitHub release   | normal release, marked _latest_  | prerelease                                        |
+| Update manifests | `latest*.yml`                    | `preview*.yml`                                    |
+| Built by         | `release.yml` on a `vX.Y.Z` tag  | `nightly.yml` (through `release.yml`)             |
+| App setting      | _Preferences → Updates → Stable_ | _Preferences → Updates → Preview_                 |
 
-### Upload order and caching
+The app uses electron-updater's GitHub provider (`publish` in `electron-builder.yml`, baked into the
+app as `resources/app-update.yml`). `UpdaterService` (`apps/desktop/src/main/services/updater.ts`)
+sets it up per channel:
 
-`.github/scripts/upload-r2.mjs` (the `r2` job of `release.yml`) checks that every file a manifest
-points at was built, then uploads in this order so a client never reads a manifest that points at a
-missing file:
+- **Stable:** `channel = 'latest'`, `allowPrerelease = false`. The updater asks GitHub for
+  `/releases/latest` and reads that release's `latest.yml` / `latest-mac.yml` / `latest-linux*.yml`.
+  Prereleases are never offered.
+- **Preview:** `channel = 'preview'`, `allowPrerelease = true`. The updater reads the releases Atom feed
+  and takes the newest release whose tag is a `-preview.N` version, then reads its `preview*.yml`.
+  Preview users follow nightlies only. Each nightly is versioned one patch above
+  `apps/desktop/package.json`, so it is always newer than the last stable release.
+- `allowDowngrade` stays off, so switching from Preview back to Stable waits for a stable version newer
+  than the installed preview.
 
-| Order | Objects                                        | `Cache-Control`                       |
-| ----- | ---------------------------------------------- | ------------------------------------- |
-| 1     | `releases/` versioned artifacts + `.blockmap`  | `public, max-age=31536000, immutable` |
-| 2     | `latest/` or `preview/` fixed-name copies      | `public, max-age=300`                 |
-| 3     | `latest/version.json` / `preview/version.json` | `no-cache, max-age=0`                 |
-| 4     | `releases/` channel manifests (`*.yml`)        | `no-cache, max-age=0`                 |
+deb/rpm/tar.gz installs can't update themselves. When a new version is out, the app links
+`https://github.com/roboza/githappens/releases/latest`, which lists every file.
 
-Run it locally with `--dry-run` to print the `aws s3 cp` commands without uploading:
-
-```bash
-node .github/scripts/upload-r2.mjs --version 0.2.0 --channel latest \
-  --dist <dir with installers> --manifests <dir with merged *.yml> --dry-run
-```
+**Differential updates** (Windows installer, macOS zip, AppImage) still work with version-less names.
+electron-updater downloads the new `<file>.blockmap` from the new release and finds the installed
+version's blockmap by swapping the version in the tag part of the URL
+(`/releases/download/v0.1.0/GitHappens-Setup-x64.exe.blockmap`). It caches it locally after the first
+update.
 
 ## Release pipeline
 
-- **Release** (`release.yml`): pushing a tag `vX.Y.Z` builds every OS/arch with `--publish never`,
-  checks the arch of native modules and bundled git, smoke-tests the packaged app, merges the per-arch
-  update manifests (`merge-update-manifests.mjs`), publishes the internal GitHub release, then
-  uploads to R2 (stable channel, `latest/`).
-- **Nightly** (`nightly.yml`): builds `X.Y.(Z+1)-preview.YYYYMMDD` from `main` through `release.yml`
-  with `-c.publish.channel=preview`, giving `preview*.yml` manifests and the `preview/` folder.
+`release.yml` (tags `v*`, manual runs, and nightly builds via `workflow_call`):
 
-The channel comes from the version: any prerelease version (`x.y.z-…`) goes to `preview`, anything
-else to `latest`. electron-builder.yml sets `channel: latest`, and `release.yml` passes
-`-c.publish.channel=<channel>` for every build (an explicit channel turns off electron-builder's
-`detectUpdateChannel`).
+1. **prepare:** resolves the version and channel (`preview` if the version contains `-`, else
+   `latest`) and creates a **draft** release `v<version>` (`--prerelease` for previews).
+2. **build** (one job per OS/arch): packages with `--publish never -c.publish.channel=<channel>`,
+   checks native modules and bundled git for the target arch, smoke-tests the packaged app, then
+   uploads the installers and `.blockmap` files to the draft (`gh release upload --clobber`). Names are
+   unique per OS/arch, so parallel jobs never collide. The per-arch `*.yml` manifests go to a workflow
+   artifact instead.
+3. **publish:** merges the per-arch manifests (`.github/scripts/merge-update-manifests.mjs`: Windows
+   x64 + arm64 share `latest.yml`, both macOS builds share `latest-mac.yml`), uploads them, then
+   publishes the draft: stable as a normal release marked _latest_, preview as a prerelease. Clients
+   never see a release before all its files and manifests are there.
 
-### GitHub secrets and variables
+The channel is passed explicitly because electron-builder's GitHub provider ignores
+`detectUpdateChannel`. A local `pnpm --filter @githappens/desktop dist` writes `latest*.yml`.
 
-Settings → Secrets and variables → Actions:
+`nightly.yml` builds `X.Y.(Z+1)-preview.YYYYMMDD` from `main` once a day when `main` changed (or on
+demand with _force_) by calling `release.yml`.
 
-| Name                       | Kind               | Value                                                                           |
-| -------------------------- | ------------------ | ------------------------------------------------------------------------------- |
-| `R2_ACCOUNT_ID`            | secret             | Cloudflare account ID (the endpoint is `https://<id>.r2.cloudflarestorage.com`) |
-| `R2_ACCESS_KEY_ID`         | secret             | Access Key ID of the R2 API token                                               |
-| `R2_SECRET_ACCESS_KEY`     | secret             | Secret Access Key of the R2 API token                                           |
-| `R2_BUCKET`                | variable or secret | Bucket name, e.g. `githappens-downloads`                                        |
-| `GITHAPPENS_DOWNLOADS_URL` | variable, optional | Public base URL. Default: `https://downloads.githappens.dev`                    |
+### Permissions and secrets
 
-Without the four `R2_*` values the `r2` job prints a notice and uploads nothing; the rest of the
-release still runs, so forks and CI without secrets build normally. The signing secrets are listed at
-the top of `release.yml`.
+Publishing needs only the workflow's own `GITHUB_TOKEN` with `contents: write` (set at the top of
+`release.yml` and `nightly.yml`). No other token or download host is involved. The optional signing
+and notarization secrets are listed at the top of `release.yml`; without them builds are unsigned.
 
-**Changing the download domain:** set `GITHAPPENS_DOWNLOADS_URL` (for example
-`https://dl.example.com`). CI then builds with `-c.publish.url=<that>/releases` and `version.json` uses
-it. No code change is needed. The default lives in one place: `publish.url` in
-`apps/desktop/electron-builder.yml`. Installed apps keep checking the feed URL they were built with,
-so keep the old domain serving `releases/` until users have updated.
-
-## One-time Cloudflare setup
-
-1. **Create the bucket.** Cloudflare dashboard → R2 Object Storage → _Create bucket_. Name it (for
-   example `githappens-downloads`) and leave the location on Automatic.
-2. **Connect the public domain.** Open the bucket → _Settings_ → _Public access_ → _Custom Domains_ →
-   _Connect Domain_ → `downloads.githappens.dev`. The `githappens.dev` zone must be on Cloudflare; the
-   dashboard creates the DNS record. Wait for the status to show _Active_. Leave the `r2.dev`
-   subdomain disabled.
-3. **Optional: CORS**, only if the website fetches `version.json` from the browser: bucket →
-   _Settings_ → _CORS policy_, allow `GET` from `https://githappens.dev`.
-4. **Create an API token.** R2 Object Storage → _Manage R2 API Tokens_ (API → _Manage API tokens_) →
-   _Create API token_: permission **Object Read & Write**, _Apply to specific buckets only_ → your
-   bucket, no expiry or one you'll rotate. Copy the **Access Key ID** and **Secret Access Key** (shown
-   once) and note your **Account ID**.
-5. **Add the GitHub secrets and variables** from the table above to the `githappens` repository.
-6. **Test it.** Run _Actions → Nightly → Run workflow_ with _force_. Then check that
-   `https://downloads.githappens.dev/releases/preview.yml` and
-   `https://downloads.githappens.dev/preview/version.json` load.
-
-The R2 custom domain serves objects with the `Cache-Control` set at upload. Cloudflare's edge cache
-honours it, so replaced manifests and `version.json` are re-validated on every request and fixed-name
-installers refresh within 5 minutes. You don't need a cache rule. If you add one, don't let it
-override origin cache headers for `*.yml` and `version.json`.
+To cut a release: bump `apps/desktop/package.json` `version`, add a `CHANGELOG.md` entry, commit, then
+`git tag v<version> && git push origin v<version>`.

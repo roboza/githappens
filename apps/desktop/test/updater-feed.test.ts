@@ -16,17 +16,23 @@ import {
   RELEASES_URL,
   updateFeedOverride,
   UpdaterService,
+  RELEASES_REPO,
   type AutoUpdaterLike,
+  type UpdateFeedOverride,
   type UpdaterServiceOptions,
 } from '../src/main/services/updater';
 import type { UpdateChannel, UpdateStatus } from '../src/shared/ipc/update-contract';
 
 /**
- * Integration test of the update pipeline (spec 15 §6.5) with the *real* electron-updater: an
- * `NsisUpdater` + `GenericProvider` talk HTTP to a local feed laid out like the R2 bucket
- * (docs/releases.md): `releases/latest.yml` / `releases/preview.yml` listing x64 + arm64 dummy
- * installers with matching sha512/size. Only Electron's `net` is swapped for Node's http (the test runs
- * outside Electron) and the app adapter is a plain object. Nothing is ever installed.
+ * Integration test of the update pipeline (spec 15 §6.5) with the *real* electron-updater, in two parts:
+ *  - `NsisUpdater` + `GenericProvider` against a local feed (the dev/test-only GH_UPDATE_FEED_URL
+ *    override): `latest.yml` / `preview.yml` listing x64 + arm64 dummy installers with matching
+ *    sha512/size — the status flow, downloads, sha512 checks and errors;
+ *  - `NsisUpdater` + `GitHubProvider` (the production provider, electron-builder.yml `publish`) against
+ *    a fake GitHub on localhost (`host`/`protocol` options): the stable channel follows only the latest
+ *    non-prerelease release, the preview channel picks the newest `-preview.N` prerelease.
+ * Only Electron's `net` is swapped for Node's http (the test runs outside Electron) and the app adapter is
+ * a plain object. Nothing is ever installed.
  */
 
 // builder-util-runtime is electron-updater's own dependency (not hoisted under pnpm).
@@ -88,23 +94,24 @@ const PREVIEW = '0.3.0-preview.1';
 const ARTIFACT = crypto.randomBytes(1024 * 1024);
 const sha512 = (b: Buffer): string => crypto.createHash('sha512').update(b).digest('base64');
 
-/** Feed directory on the download host (electron-builder.yml `publish.url` = <host>/releases). */
+/** Feed directory of the local generic feed. */
 const FEED_DIR = '/releases/';
 /** The installer electron-updater must pick on this machine (it matches `process.arch` in the url). */
 const HOST_ARCH = process.arch === 'arm64' ? 'arm64' : 'x64';
 const OTHER_ARCH = HOST_ARCH === 'x64' ? 'arm64' : 'x64';
-const artifactName = (v: string, arch: string = HOST_ARCH): string => `GitHappens-Setup-${v}-${arch}.exe`;
+/** Release assets are version-less (electron-builder.yml artifactName); the release tag holds the version. */
+const artifactName = (arch: string = HOST_ARCH): string => `GitHappens-Setup-${arch}.exe`;
 /** A merged Windows manifest (release.yml): x64 first (legacy `path`), then arm64; the client picks by arch. */
 const manifest = (version: string, body = ARTIFACT): string =>
   [
     `version: ${version}`,
     'files:',
     ...['x64', 'arm64'].flatMap((arch) => [
-      `  - url: ${artifactName(version, arch)}`,
+      `  - url: ${artifactName(arch)}`,
       `    sha512: ${sha512(body)}`,
       `    size: ${body.length}`,
     ]),
-    `path: ${artifactName(version, 'x64')}`,
+    `path: ${artifactName('x64')}`,
     `sha512: ${sha512(body)}`,
     `releaseDate: '2026-10-10T00:00:00.000Z'`,
     '',
@@ -139,7 +146,7 @@ async function startFeed(): Promise<Feed> {
       res.end(manifest(ymlMatch[1] === 'preview' ? PREVIEW : STABLE));
       return;
     }
-    const artifacts = [STABLE, PREVIEW].flatMap((v) => ['x64', 'arm64'].map((a) => `/${artifactName(v, a)}`));
+    const artifacts = ['x64', 'arm64'].map((a) => `/${artifactName(a)}`);
     if (artifacts.includes(pathname)) {
       const body = feed.mode === 'corrupt' ? Buffer.alloc(ARTIFACT.length, 7) : ARTIFACT;
       res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': body.length });
@@ -190,14 +197,28 @@ afterEach(() => {
   feed.requests.length = 0;
 });
 
-function realUpdater(name: string): {
+/**
+ * A real NsisUpdater. Default feed: the local generic feed, through the same file the app writes for the
+ * GH_UPDATE_FEED_URL override. `config` replaces it with another app-update.yml (the fake GitHub).
+ */
+function realUpdater(
+  name: string,
+  config?: Record<string, unknown>,
+): {
   updater: NsisUpdater;
   cacheDir: string;
   quitAndInstall: ReturnType<typeof vi.fn>;
 } {
   const dir = fs.mkdtempSync(path.join(tmp, `${name}-`));
-  // Same file the app writes for the GH_UPDATE_FEED_URL override (generic provider, no publisherName).
-  const override = updateFeedOverride({ GH_UPDATE_FEED_URL: feed.url }, false, dir);
+  let override: UpdateFeedOverride | null;
+  if (config) {
+    const configPath = path.join(dir, 'app-update.yml');
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`); // JSON is valid YAML
+    override = { url: '', configPath };
+  } else {
+    // Generic provider, no publisherName (the dev/test-only override).
+    override = updateFeedOverride({ GH_UPDATE_FEED_URL: feed.url }, false, dir);
+  }
   if (!override) throw new Error('override rejected');
   const updater = new NsisUpdater(undefined, {
     version: '0.1.0',
@@ -272,9 +293,9 @@ describe('update feed (real electron-updater + local generic feed)', () => {
     expect(progress.some((p) => p > 0 && p < 1)).toBe(true);
     expect(svc.current).toMatchObject({ state: 'ready', version: STABLE, progress: 1 });
     // This machine's installer was picked from the merged x64 + arm64 manifest.
-    expect(feed.requests).toContain(`/${artifactName(STABLE)}`);
-    expect(feed.requests).not.toContain(`/${artifactName(STABLE, OTHER_ARCH)}`);
-    const downloaded = path.join(cacheDir, 'pending', artifactName(STABLE));
+    expect(feed.requests).toContain(`/${artifactName()}`);
+    expect(feed.requests).not.toContain(`/${artifactName(OTHER_ARCH)}`);
+    const downloaded = path.join(cacheDir, 'pending', artifactName());
     expect(fs.readFileSync(downloaded).equals(ARTIFACT)).toBe(true);
     expect(quitAndInstall).not.toHaveBeenCalled();
   });
@@ -347,14 +368,14 @@ describe('update feed (real electron-updater + local generic feed)', () => {
     await vi.waitFor(() => expect(svc.current.state).toBe('error'), { timeout: 15_000 });
     expect(svc.current.error).toMatch(/sha512 checksum mismatch/);
     expect(statuses.some((s) => s.state === 'ready')).toBe(false);
-    expect(fs.existsSync(path.join(cacheDir, 'pending', artifactName(STABLE)))).toBe(false);
+    expect(fs.existsSync(path.join(cacheDir, 'pending', artifactName()))).toBe(false);
   });
 
-  it('Linux deb/rpm: links the website download page and never downloads', async () => {
+  it('Linux deb/rpm: links the latest GitHub release and never downloads', async () => {
     feed.slow = false;
     const { updater } = realUpdater('deb');
     const { svc, statuses } = service(updater, { platform: 'linux', env: {} });
-    expect(RELEASES_URL).toBe('https://githappens.dev/#download');
+    expect(RELEASES_URL).toBe('https://github.com/roboza/githappens/releases/latest');
     expect(svc.current).toMatchObject({ state: 'manual', downloadUrl: RELEASES_URL });
     await svc.check();
     expect(svc.current).toMatchObject({ state: 'manual', version: STABLE, downloadUrl: RELEASES_URL });
@@ -367,6 +388,119 @@ describe('update feed (real electron-updater + local generic feed)', () => {
     // Installing is a no-op in manual mode.
     await svc.installAndRestart();
     expect(svc.current.state).toBe('manual');
+  });
+});
+
+// ---- fake GitHub (GitHubProvider, the production provider) ---------------------------------------------
+
+/**
+ * Just enough of GitHub for electron-updater's GitHubProvider. With a custom `host` it reads the
+ * releases Atom feed, `/api/v3/repos/<owner>/<repo>/releases/latest` (the newest non-prerelease, like
+ * github.com's /releases/latest) and assets from `/<owner>/<repo>/releases/download/<tag>/<name>`.
+ * Releases, newest first: a nightly prerelease, then the stable release.
+ */
+interface FakeGitHub {
+  host: string;
+  requests: string[];
+  close(): Promise<void>;
+}
+
+async function startFakeGitHub(): Promise<FakeGitHub> {
+  const { owner, repo } = RELEASES_REPO;
+  const base = `/${owner}/${repo}/releases`;
+  const gh = { requests: [] as string[] } as FakeGitHub;
+  // Each release carries the manifest of its own channel (release.yml passes -c.publish.channel).
+  const releases = [
+    { tag: `v${PREVIEW}`, manifest: 'preview.yml', version: PREVIEW },
+    { tag: `v${STABLE}`, manifest: 'latest.yml', version: STABLE },
+  ];
+  const server = http.createServer((req, res) => {
+    const p = new URL(req.url ?? '/', 'http://x').pathname;
+    gh.requests.push(p);
+    if (p === `${base}.atom`) {
+      const entries = releases.map(
+        (r) =>
+          `<entry><id>tag:github.com,2008:Repository/1/${r.tag}</id>` +
+          `<link rel="alternate" type="text/html" href="http://${gh.host}${base}/tag/${r.tag}"/>` +
+          `<title>GitHappens ${r.version}</title><content type="html">Notes for ${r.version}</content></entry>`,
+      );
+      res.writeHead(200, { 'content-type': 'application/atom+xml' });
+      res.end(
+        `<?xml version="1.0" encoding="UTF-8"?>\n<feed xmlns="http://www.w3.org/2005/Atom">${entries.join('')}</feed>`,
+      );
+      return;
+    }
+    if (p === `/api/v3/repos/${owner}/${repo}/releases/latest`) {
+      res
+        .writeHead(200, { 'content-type': 'application/json' })
+        .end(JSON.stringify({ tag_name: `v${STABLE}` }));
+      return;
+    }
+    const m = new RegExp(`^${base}/download/([^/]+)/([^/]+)$`).exec(p);
+    const release = releases.find((r) => r.tag === m?.[1]);
+    if (m && release && m[2] === release.manifest) {
+      res.writeHead(200, { 'content-type': 'application/octet-stream' }).end(manifest(release.version));
+      return;
+    }
+    if (m && release && ['x64', 'arm64'].some((a) => m[2] === artifactName(a))) {
+      res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': ARTIFACT.length });
+      res.end(ARTIFACT);
+      return;
+    }
+    res.writeHead(404).end();
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  gh.host = `127.0.0.1:${(server.address() as AddressInfo).port}`;
+  gh.close = () => new Promise((resolve) => server.close(() => resolve()));
+  return gh;
+}
+
+describe('update feed (real electron-updater + GitHubProvider against a fake GitHub)', () => {
+  let gh: FakeGitHub;
+  beforeAll(async () => {
+    gh = await startFakeGitHub();
+  });
+  afterAll(() => gh.close());
+  afterEach(() => {
+    gh.requests.length = 0;
+  });
+
+  /** app-update.yml as electron-builder writes it from `publish`, pointed at the fake host. */
+  const githubConfig = () => ({
+    provider: 'github',
+    ...RELEASES_REPO,
+    host: gh.host,
+    protocol: 'http',
+    updaterCacheDirName: 'githappens-updater-test',
+  });
+  const download = (tag: string, name: string) =>
+    `/${RELEASES_REPO.owner}/${RELEASES_REPO.repo}/releases/download/${tag}/${name}`;
+
+  it('Stable follows the latest non-prerelease release and downloads its version-less asset', async () => {
+    const { updater, cacheDir } = realUpdater('github-stable', githubConfig());
+    const { svc } = service(updater);
+    await svc.check();
+    await vi.waitFor(() => expect(svc.current.state).toBe('ready'), { timeout: 15_000 });
+    expect(svc.current).toMatchObject({ version: STABLE, channel: 'stable' });
+    expect(updater.allowPrerelease).toBe(false);
+    // The newer nightly prerelease at the top of the feed is ignored.
+    expect(gh.requests).toContain(
+      `/api/v3/repos/${RELEASES_REPO.owner}/${RELEASES_REPO.repo}/releases/latest`,
+    );
+    expect(gh.requests).toContain(download(`v${STABLE}`, 'latest.yml'));
+    expect(gh.requests).toContain(download(`v${STABLE}`, artifactName()));
+    expect(gh.requests).not.toContain(download(`v${STABLE}`, artifactName(OTHER_ARCH)));
+    expect(gh.requests.some((r) => r.includes(`v${PREVIEW}`))).toBe(false);
+    expect(fs.readFileSync(path.join(cacheDir, 'pending', artifactName())).equals(ARTIFACT)).toBe(true);
+  });
+
+  it('Preview sees the newest -preview prerelease and reads its preview.yml', async () => {
+    const { updater } = realUpdater('github-preview', githubConfig());
+    const { svc } = service(updater, { channel: 'preview', autoDownload: false });
+    expect(await svc.check()).toMatchObject({ state: 'available', version: PREVIEW, channel: 'preview' });
+    expect(updater.allowPrerelease).toBe(true);
+    expect(gh.requests).toContain(download(`v${PREVIEW}`, 'preview.yml'));
+    expect(gh.requests.some((r) => r.endsWith('.exe'))).toBe(false);
   });
 });
 

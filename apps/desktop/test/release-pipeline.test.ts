@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { binaryArch, checkPackage } from '../../../.github/scripts/check-package-arch.mjs';
 import { mergeDir, mergeManifests } from '../../../.github/scripts/merge-update-manifests.mjs';
-import * as uploadR2 from '../../../.github/scripts/upload-r2.mjs';
+import { RELEASES_REPO, RELEASES_URL } from '../src/main/services/updater';
 
 /**
  * Release pipeline (spec 15 §6.4–6.6): the per-arch update-manifest merge used by release.yml, and a
@@ -22,6 +22,20 @@ const provider = updaterRequire('./providers/Provider') as {
   findFile(files: { url: URL; info: { url: string } }[], ext: string): { url: URL } | undefined;
 };
 
+const { GitHubProvider } = updaterRequire('./providers/GitHubProvider') as {
+  GitHubProvider: new (
+    options: object,
+    updater: object,
+    runtimeOptions: object,
+  ) => {
+    resolveFiles(info: object): { url: URL; info: { url: string } }[];
+    getBlockMapFiles(baseUrl: URL, oldVersion: string, newVersion: string): URL[];
+  };
+};
+/** electron-updater's GitHubProvider for the repo in electron-builder.yml `publish`. */
+const githubProvider = () =>
+  new GitHubProvider({ provider: 'github', ...RELEASES_REPO }, { channel: 'latest' }, { platform: 'win32' });
+
 const merge = mergeManifests as (texts: string[]) => { text: string; files: number };
 const mergeAll = mergeDir as (inDir: string, outDir: string) => string[];
 
@@ -30,10 +44,10 @@ const winManifest = (arch: 'x64' | 'arm64', eol = '\n'): string =>
   [
     'version: 0.2.0',
     'files:',
-    `  - url: GitHappens-Setup-0.2.0-${arch}.exe`,
+    `  - url: GitHappens-Setup-${arch}.exe`,
     `    sha512: sha-${arch}==`,
     `    size: ${arch === 'x64' ? 100 : 90}`,
-    `path: GitHappens-Setup-0.2.0-${arch}.exe`,
+    `path: GitHappens-Setup-${arch}.exe`,
     `sha512: sha-${arch}==`,
     "releaseDate: '2026-10-10T03:00:00.000Z'",
     '',
@@ -42,13 +56,13 @@ const macManifest = (arch: 'x64' | 'arm64'): string =>
   [
     'version: 0.2.0',
     'files:',
-    `  - url: GitHappens-0.2.0-mac-${arch}.zip`,
+    `  - url: GitHappens-mac-${arch}.zip`,
     `    sha512: zip-${arch}==`,
     '    size: 10',
-    `  - url: GitHappens-0.2.0-mac-${arch}.dmg`,
+    `  - url: GitHappens-mac-${arch}.dmg`,
     `    sha512: dmg-${arch}==`,
     '    size: 11',
-    `path: GitHappens-0.2.0-mac-${arch}.zip`,
+    `path: GitHappens-mac-${arch}.zip`,
     `sha512: zip-${arch}==`,
     "releaseDate: '2026-10-10T03:00:00.000Z'",
     '',
@@ -77,16 +91,29 @@ describe('update manifest merge (release.yml publish job)', () => {
     expect(files).toBe(2);
     const info = yaml.load(text) as { version: string; path: string; files: { url: string }[] };
     expect(info.version).toBe('0.2.0');
-    expect(info.path).toBe('GitHappens-Setup-0.2.0-x64.exe'); // legacy field stays x64
-    expect(info.files.map((f) => f.url)).toEqual([
-      'GitHappens-Setup-0.2.0-x64.exe',
-      'GitHappens-Setup-0.2.0-arm64.exe',
-    ]);
-    const resolved = provider.resolveFiles(info, new URL('https://example.test/download/'));
+    expect(info.path).toBe('GitHappens-Setup-x64.exe'); // legacy field stays x64
+    expect(info.files.map((f) => f.url)).toEqual(['GitHappens-Setup-x64.exe', 'GitHappens-Setup-arm64.exe']);
+    // The github provider resolves the version-less names inside the release's tag.
+    const gh = githubProvider();
+    const resolved = gh.resolveFiles({ ...info, tag: 'v0.2.0' });
     for (const arch of ['x64', 'arm64']) {
       const picked = withArch(arch, () => provider.findFile(resolved, 'exe'));
-      expect(picked?.url.pathname).toBe(`/download/GitHappens-Setup-0.2.0-${arch}.exe`);
+      expect(picked?.url.href).toBe(
+        `https://github.com/roboza/githappens/releases/download/v0.2.0/GitHappens-Setup-${arch}.exe`,
+      );
     }
+  });
+
+  it("differential updates find the previous release's blockmap by its tag", () => {
+    const gh = githubProvider();
+    const [file] = gh.resolveFiles({ ...(yaml.load(winManifest('x64')) as object), tag: 'v0.2.0' });
+    const [oldMap, newMap] = gh.getBlockMapFiles(file!.url, '0.1.0', '0.2.0');
+    expect(newMap!.href).toBe(
+      'https://github.com/roboza/githappens/releases/download/v0.2.0/GitHappens-Setup-x64.exe.blockmap',
+    );
+    expect(oldMap!.href).toBe(
+      'https://github.com/roboza/githappens/releases/download/v0.1.0/GitHappens-Setup-x64.exe.blockmap',
+    );
   });
 
   it('merges both macOS builds and deduplicates re-uploaded entries', () => {
@@ -94,7 +121,7 @@ describe('update manifest merge (release.yml publish job)', () => {
     expect(files).toBe(4);
     const info = yaml.load(text) as { files: { url: string; sha512: string; size: number }[] };
     expect(info.files).toContainEqual({
-      url: 'GitHappens-0.2.0-mac-arm64.zip',
+      url: 'GitHappens-mac-arm64.zip',
       sha512: 'zip-arm64==',
       size: 10,
     });
@@ -116,12 +143,12 @@ describe('update manifest merge (release.yml publish job)', () => {
     put(
       'manifest-linux-x64',
       'latest-linux.yml',
-      winManifest('x64').replace(/Setup-0\.2\.0-x64\.exe/g, '0.2.0-linux-x86_64.AppImage'),
+      winManifest('x64').replace(/Setup-x64\.exe/g, 'linux-x86_64.AppImage'),
     );
     put(
       'manifest-linux-arm64',
       'latest-linux-arm64.yml',
-      winManifest('arm64').replace(/Setup-0\.2\.0-arm64\.exe/g, '0.2.0-linux-arm64.AppImage'),
+      winManifest('arm64').replace(/Setup-arm64\.exe/g, 'linux-arm64.AppImage'),
     );
     put('manifest-linux-arm64', 'builder-debug.yml', 'x: 1\n');
     const summary = mergeAll(path.join(dir, 'in'), path.join(dir, 'out'));
@@ -286,35 +313,98 @@ describe('check-package-arch (release.yml "Verify native modules …")', () => {
   });
 });
 
-describe('R2 feed config (electron-builder.yml publish + release.yml)', () => {
+describe('GitHub Releases feed (electron-builder.yml publish + release.yml)', () => {
   const builderText = fs.readFileSync(path.join(repoRoot, 'apps', 'desktop', 'electron-builder.yml'), 'utf8');
-  const resolveUrl = uploadR2.resolveDownloadsUrl as (
-    env: Record<string, string | undefined>,
-    text: string,
-  ) => string;
+  const cfg = yaml.load(builderText) as Record<string, unknown> & {
+    publish: Record<string, unknown>;
+    artifactName: string;
+    nsis: { artifactName: string };
+    dmg: { artifactName: string };
+  };
 
-  it('publishes to the generic provider on the download host, stable channel by default', () => {
-    const cfg = yaml.load(builderText) as { publish: Record<string, unknown> };
+  it('publishes to GitHub Releases of roboza/githappens as a draft that CI publishes', () => {
     expect(cfg.publish).toEqual({
-      provider: 'generic',
-      url: 'https://downloads.githappens.dev/releases',
-      channel: 'latest',
+      provider: 'github',
+      owner: 'roboza',
+      repo: 'githappens',
+      releaseType: 'draft',
     });
+    // The app's own references (deb/rpm download link) point at the same repository.
+    expect(RELEASES_REPO).toEqual({ owner: cfg.publish.owner, repo: cfg.publish.repo });
+    expect(RELEASES_URL).toBe('https://github.com/roboza/githappens/releases/latest');
+    // No channel in the file: local builds write latest*.yml, CI passes the channel per version.
+    expect(cfg.publish.channel).toBeUndefined();
   });
 
-  it('the downloads base URL has one default (electron-builder.yml) and one override (repo variable)', () => {
-    expect(resolveUrl({}, builderText)).toBe('https://downloads.githappens.dev');
-    expect(resolveUrl({ GITHAPPENS_DOWNLOADS_URL: ' https://dl.example.test/ ' }, builderText)).toBe(
-      'https://dl.example.test',
+  it('asset names carry no version, so /releases/latest/download/<name> always works', () => {
+    const patterns = [cfg.artifactName, cfg.nsis.artifactName, cfg.dmg.artifactName];
+    for (const p of patterns) expect(p).not.toContain('${version}');
+    // electron-builder's per-format arch spelling (x86_64/amd64/aarch64) is kept as is.
+    const expand = (pattern: string, os: string, arch: string, ext: string): string =>
+      pattern
+        .replace('${productName}', 'GitHappens')
+        .replace('${os}', os)
+        .replace('${arch}', arch)
+        .replace('${ext}', ext);
+    const names = [
+      ...['x64', 'arm64'].flatMap((a) => [
+        expand(cfg.nsis.artifactName, 'win', a, 'exe'),
+        expand(cfg.artifactName, 'win', a, 'zip'),
+        expand(cfg.dmg.artifactName, 'mac', a, 'dmg'),
+        expand(cfg.artifactName, 'mac', a, 'zip'),
+        expand(cfg.artifactName, 'linux', a, 'tar.gz'),
+      ]),
+      ...[
+        ['x86_64', 'AppImage'],
+        ['arm64', 'AppImage'],
+        ['amd64', 'deb'],
+        ['arm64', 'deb'],
+        ['x86_64', 'rpm'],
+        ['aarch64', 'rpm'],
+      ].map(([a, ext]) => expand(cfg.artifactName, 'linux', a!, ext!)),
+    ];
+    expect(names.sort()).toEqual(
+      [
+        'GitHappens-Setup-x64.exe',
+        'GitHappens-Setup-arm64.exe',
+        'GitHappens-win-x64.zip',
+        'GitHappens-win-arm64.zip',
+        'GitHappens-mac-x64.dmg',
+        'GitHappens-mac-arm64.dmg',
+        'GitHappens-mac-x64.zip',
+        'GitHappens-mac-arm64.zip',
+        'GitHappens-linux-x64.tar.gz',
+        'GitHappens-linux-arm64.tar.gz',
+        'GitHappens-linux-x86_64.AppImage',
+        'GitHappens-linux-arm64.AppImage',
+        'GitHappens-linux-amd64.deb',
+        'GitHappens-linux-arm64.deb',
+        'GitHappens-linux-x86_64.rpm',
+        'GitHappens-linux-aarch64.rpm',
+      ].sort(),
     );
-    expect(() => resolveUrl({}, 'appId: x\n')).toThrow(/publish\.url/);
-    // No other copy of the host in the workflows or the upload script.
-    for (const f of ['release.yml', 'nightly.yml']) {
-      const text = fs.readFileSync(path.join(repoRoot, '.github', 'workflows', f), 'utf8');
-      expect(text).not.toContain('downloads.githappens.dev');
-    }
-    const script = fs.readFileSync(path.join(repoRoot, '.github', 'scripts', 'upload-r2.mjs'), 'utf8');
-    expect(script).not.toContain('downloads.githappens.dev');
+    // GitHub keeps these names unchanged (electron-builder only rewrites names GitHub would mangle).
+    for (const n of names) expect(n).toMatch(/^[\w.-]+$/);
+  });
+
+  it('the website download buttons use /releases/latest/download/<fixed name>', () => {
+    const html = fs.readFileSync(path.join(repoRoot, 'website', 'index.html'), 'utf8');
+    const links = [...html.matchAll(/href="(https:\/\/github\.com\/roboza\/githappens\/releases\/[^"]+)"/g)]
+      .map((m) => m[1]!)
+      .filter((u) => u.includes('/download/'));
+    expect(links.sort()).toEqual(
+      [
+        'GitHappens-Setup-x64.exe',
+        'GitHappens-mac-arm64.dmg',
+        'GitHappens-mac-x64.dmg',
+        'GitHappens-linux-x86_64.AppImage',
+        'GitHappens-linux-amd64.deb',
+        'GitHappens-linux-x86_64.rpm',
+        'GitHappens-linux-x64.tar.gz',
+      ]
+        .map((n) => `https://github.com/roboza/githappens/releases/latest/download/${n}`)
+        .sort(),
+    );
   });
 
   it('every workflow file parses', () => {
@@ -327,7 +417,7 @@ describe('R2 feed config (electron-builder.yml publish + release.yml)', () => {
     }
   });
 
-  it('release.yml packages with --publish never, the computed channel and the optional host override', () => {
+  it('release.yml packages with --publish never and the computed channel', () => {
     const rel = workflow('release.yml');
     const v = rel.jobs.prepare!.steps!.find((s) => s.name === 'Resolve version')!;
     expect(v.run).toContain('echo "channel=$channel"');
@@ -336,343 +426,31 @@ describe('R2 feed config (electron-builder.yml publish + release.yml)', () => {
       env: Record<string, string>;
     };
     expect(pkg.env.CHANNEL).toBe('${{ needs.prepare.outputs.channel }}');
-    expect(pkg.env.DOWNLOADS_URL).toBe('${{ vars.GITHAPPENS_DOWNLOADS_URL }}');
     expect(pkg.run).toContain('--publish never');
+    // The github provider ignores detectUpdateChannel: preview builds need the explicit channel.
     expect(pkg.run).toContain('"-c.publish.channel=$CHANNEL"');
-    expect(pkg.run).toContain('"-c.publish.url=${DOWNLOADS_URL%/}/releases"');
+    expect(pkg.run).not.toContain('publish.url');
   });
 
-  it('release.yml uploads to R2 after the manifest merge, skipping cleanly without secrets', () => {
-    const rel = workflow('release.yml');
-    const publish = rel.jobs.publish!;
-    expect(publish.steps!.some((s) => s.with?.name === 'update-manifests')).toBe(true);
-    const r2 = rel.jobs.r2! as Job & { env: Record<string, string> };
-    expect(r2.needs).toEqual(['prepare', 'publish']);
-    expect(r2.env).toMatchObject({
-      R2_ACCOUNT_ID: '${{ secrets.R2_ACCOUNT_ID }}',
-      R2_ACCESS_KEY_ID: '${{ secrets.R2_ACCESS_KEY_ID }}',
-      R2_SECRET_ACCESS_KEY: '${{ secrets.R2_SECRET_ACCESS_KEY }}',
-      R2_BUCKET: '${{ vars.R2_BUCKET || secrets.R2_BUCKET }}',
-      GITHAPPENS_DOWNLOADS_URL: '${{ vars.GITHAPPENS_DOWNLOADS_URL }}',
-    });
-    const [check, ...rest] = r2.steps!;
-    expect(check!.name).toBe('Check R2 configuration');
-    expect(check!.run).toContain('::notice');
-    expect(check!.run).toContain('enabled=false');
-    // Every later step is gated, so a fork without secrets ends green with the notice.
-    for (const s of rest) expect(s.if, s.name ?? s.uses).toBe("steps.cfg.outputs.enabled == 'true'");
-    const runs = rest.map((s) => s.run ?? '').filter((r) => r.includes('upload-r2.mjs'));
-    expect(runs).toHaveLength(2);
-    expect(runs[0]).toContain('--dry-run');
-    expect(runs[1]).not.toContain('--dry-run');
-    // Credentials never appear on a command line.
-    for (const r of runs) expect(r).not.toMatch(/SECRET|ACCESS_KEY/);
-  });
-});
-
-type Upload = { phase: string; src: string; key: string; cacheControl: string; contentType: string };
-type VersionJson = { version: string; channel: string; date: string; files: Record<string, string> };
-type PlanInput = {
-  version: string;
-  channel: string;
-  downloadsUrl: string;
-  date: string;
-  artifacts: { name: string; path: string }[];
-  manifests: { name: string; path: string; text: string }[];
-  versionJsonPath: string;
-};
-const plan = uploadR2.planUpload as (o: PlanInput) => {
-  uploads: Upload[];
-  versionJson: VersionJson;
-  warnings: string[];
-};
-const CACHE = uploadR2.CACHE_CONTROL as Record<'immutable' | 'fixed' | 'metadata', string>;
-
-/** What the default build matrix (no arm64 runners) produces for a version. */
-function defaultBuild(v: string): { artifacts: string[]; manifests: Record<string, string[]> } {
-  const win = [
-    `GitHappens-Setup-${v}-x64.exe`,
-    `GitHappens-Setup-${v}-x64.exe.blockmap`,
-    `GitHappens-${v}-win-x64.zip`,
-  ];
-  const mac = ['x64', 'arm64'].flatMap((a) => [
-    `GitHappens-${v}-mac-${a}.dmg`,
-    `GitHappens-${v}-mac-${a}.dmg.blockmap`,
-    `GitHappens-${v}-mac-${a}.zip`,
-    `GitHappens-${v}-mac-${a}.zip.blockmap`,
-  ]);
-  const linux = ['x86_64.AppImage', 'amd64.deb', 'x86_64.rpm', 'x64.tar.gz'].map(
-    (s) => `GitHappens-${v}-linux-${s}`,
-  );
-  return {
-    artifacts: [...win, ...mac, ...linux],
-    manifests: {
-      yml: [`GitHappens-Setup-${v}-x64.exe`],
-      'mac.yml': ['x64', 'arm64'].flatMap((a) => [
-        `GitHappens-${v}-mac-${a}.zip`,
-        `GitHappens-${v}-mac-${a}.dmg`,
-      ]),
-      'linux.yml': [`GitHappens-${v}-linux-x86_64.AppImage`],
-    },
-  };
-}
-const manifestText = (v: string, urls: string[]): string =>
-  [
-    `version: ${v}`,
-    'files:',
-    ...urls.flatMap((u) => [`  - url: ${u}`, '    sha512: abc==', '    size: 1']),
-    `path: ${urls[0]}`,
-    'sha512: abc==',
-    "releaseDate: '2026-10-10T03:00:00.000Z'",
-    '',
-  ].join('\n');
-function planFor(v: string, channel: string, over: Partial<PlanInput> = {}): ReturnType<typeof plan> {
-  const b = defaultBuild(v);
-  return plan({
-    version: v,
-    channel,
-    downloadsUrl: 'https://downloads.githappens.dev',
-    date: '2026-10-10T03:00:00.000Z',
-    artifacts: b.artifacts.map((name) => ({ name, path: `dist/${name}` })),
-    manifests: Object.entries(b.manifests).map(([suffix, urls]) => {
-      const name = suffix === 'yml' ? `${channel}.yml` : `${channel}-${suffix}`;
-      return { name, path: `manifests/${name}`, text: manifestText(v, urls) };
-    }),
-    versionJsonPath: 'work/version.json',
-    ...over,
-  });
-}
-
-describe('upload-r2.mjs (R2 layout, order and cache headers)', () => {
-  it('uploads artifacts, then fixed-name copies, then version.json, and the channel manifests last', () => {
-    const { uploads } = planFor('0.2.0', 'latest');
-    const phases = uploads.map((u) => u.phase).filter((p, i, a) => p !== a[i - 1]);
-    expect(phases).toEqual(['artifacts', 'fixed', 'metadata', 'manifests']);
-    const lastArtifact = uploads.map((u) => u.phase).lastIndexOf('artifacts');
-    const firstManifest = uploads.findIndex((u) => u.key.endsWith('.yml'));
-    expect(firstManifest).toBeGreaterThan(lastArtifact);
-    expect(uploads.slice(firstManifest).map((u) => u.key)).toEqual([
-      'releases/latest-linux.yml',
-      'releases/latest-mac.yml',
-      'releases/latest.yml',
-    ]);
-  });
-
-  it('sets the cache headers per kind of object', () => {
-    const { uploads } = planFor('0.2.0', 'latest');
-    for (const u of uploads) {
-      const metadata = u.key.endsWith('.yml') || u.key.endsWith('/version.json');
-      const expected = metadata
-        ? CACHE.metadata
-        : u.key.startsWith('releases/')
-          ? CACHE.immutable
-          : CACHE.fixed;
-      expect(u.cacheControl, u.key).toBe(expected);
-    }
-    expect(CACHE).toEqual({
-      immutable: 'public, max-age=31536000, immutable',
-      fixed: 'public, max-age=300',
-      metadata: 'no-cache, max-age=0',
-    });
-    expect(uploads.find((u) => u.key === 'releases/latest.yml')!.contentType).toBe(
-      'text/yaml; charset=utf-8',
-    );
-  });
-
-  it('puts every versioned artifact + blockmap in releases/ and fixed-name copies in latest/', () => {
-    const { uploads, versionJson, warnings } = planFor('0.2.0', 'latest');
-    expect(warnings).toEqual([]);
-    const keys = (phase: string): string[] => uploads.filter((u) => u.phase === phase).map((u) => u.key);
-    expect(keys('artifacts')).toHaveLength(defaultBuild('0.2.0').artifacts.length);
-    expect(keys('artifacts')).toContain('releases/GitHappens-Setup-0.2.0-x64.exe.blockmap');
-    expect(keys('fixed').sort()).toEqual([
-      'latest/GitHappens-Setup-x64.exe',
-      'latest/GitHappens-linux-amd64.deb',
-      'latest/GitHappens-linux-x64.tar.gz',
-      'latest/GitHappens-linux-x86_64.AppImage',
-      'latest/GitHappens-linux-x86_64.rpm',
-      'latest/GitHappens-mac-arm64.dmg',
-      'latest/GitHappens-mac-arm64.zip',
-      'latest/GitHappens-mac-x64.dmg',
-      'latest/GitHappens-mac-x64.zip',
-      'latest/GitHappens-win-x64.zip',
-    ]);
-    expect(keys('metadata')).toEqual(['latest/version.json']);
-    const base = 'https://downloads.githappens.dev/latest';
-    expect(versionJson).toEqual({
-      version: '0.2.0',
-      channel: 'latest',
-      date: '2026-10-10T03:00:00.000Z',
-      files: {
-        'linux-x64-appimage': `${base}/GitHappens-linux-x86_64.AppImage`,
-        'linux-x64-deb': `${base}/GitHappens-linux-amd64.deb`,
-        'linux-x64-rpm': `${base}/GitHappens-linux-x86_64.rpm`,
-        'linux-x64-tar.gz': `${base}/GitHappens-linux-x64.tar.gz`,
-        'mac-arm64-dmg': `${base}/GitHappens-mac-arm64.dmg`,
-        'mac-arm64-zip': `${base}/GitHappens-mac-arm64.zip`,
-        'mac-x64-dmg': `${base}/GitHappens-mac-x64.dmg`,
-        'mac-x64-zip': `${base}/GitHappens-mac-x64.zip`,
-        'windows-x64-exe': `${base}/GitHappens-Setup-x64.exe`,
-        'windows-x64-zip': `${base}/GitHappens-win-x64.zip`,
-      },
-    });
-  });
-
-  it('maps the arm64 Windows/Linux names electron-builder produces', () => {
-    const fixed = uploadR2.fixedCopy as (n: string, v: string) => { fixed: string; key: string } | null;
-    const v = '0.2.0';
-    const cases: [string, string, string][] = [
-      [`GitHappens-Setup-${v}-arm64.exe`, 'GitHappens-Setup-arm64.exe', 'windows-arm64-exe'],
-      [`GitHappens-${v}-win-arm64.zip`, 'GitHappens-win-arm64.zip', 'windows-arm64-zip'],
-      [`GitHappens-${v}-linux-arm64.AppImage`, 'GitHappens-linux-arm64.AppImage', 'linux-arm64-appimage'],
-      [`GitHappens-${v}-linux-arm64.deb`, 'GitHappens-linux-arm64.deb', 'linux-arm64-deb'],
-      [`GitHappens-${v}-linux-aarch64.rpm`, 'GitHappens-linux-aarch64.rpm', 'linux-arm64-rpm'],
-      [`GitHappens-${v}-linux-arm64.tar.gz`, 'GitHappens-linux-arm64.tar.gz', 'linux-arm64-tar.gz'],
-    ];
-    for (const [name, f, key] of cases) expect(fixed(name, v)).toEqual({ fixed: f, key });
-    expect(fixed(`GitHappens-Setup-${v}-x64.exe.blockmap`, v)).toBeNull();
-    expect(fixed('GitHappens-Setup-0.2.1-x64.exe', v)).toBeNull();
-  });
-
-  it('nightly builds go to the preview channel and the preview/ folder', () => {
-    const v = '0.2.1-preview.20261010';
-    const { uploads, versionJson } = planFor(v, 'preview');
-    expect(uploads.filter((u) => u.phase === 'fixed').every((u) => u.key.startsWith('preview/'))).toBe(true);
-    expect(uploads.some((u) => u.key === 'preview/GitHappens-Setup-x64.exe')).toBe(true);
-    expect(uploads.some((u) => u.key === `releases/GitHappens-Setup-${v}-x64.exe`)).toBe(true);
-    expect(uploads.filter((u) => u.phase === 'manifests').map((u) => u.key)).toEqual([
-      'releases/preview-linux.yml',
-      'releases/preview-mac.yml',
-      'releases/preview.yml',
-    ]);
-    expect(versionJson.files['windows-x64-exe']).toBe(
-      'https://downloads.githappens.dev/preview/GitHappens-Setup-x64.exe',
-    );
-  });
-
-  it('refuses inconsistent input before uploading anything', () => {
-    const v = '0.2.0';
-    const b = defaultBuild(v);
-    const winYml = b.manifests.yml!;
-    // A manifest that points at a file that was not built.
-    expect(() =>
-      planFor(v, 'latest', {
-        artifacts: b.artifacts.filter((n) => !n.endsWith('.AppImage')).map((name) => ({ name, path: name })),
-      }),
-    ).toThrow(/latest-linux\.yml points at GitHappens-0\.2\.0-linux-x86_64\.AppImage/);
-    // Wrong channel for the version, manifests of the other channel, or of another version.
-    expect(() => planFor(v, 'preview')).toThrow(/does not belong on the preview channel/);
-    expect(() =>
-      planFor(v, 'latest', {
-        manifests: [{ name: 'preview.yml', path: 'p', text: manifestText(v, winYml) }],
-      }),
-    ).toThrow(/preview\.yml does not belong/);
-    expect(() =>
-      planFor(v, 'latest', {
-        manifests: [{ name: 'latest.yml', path: 'p', text: manifestText('0.1.9', winYml) }],
-      }),
-    ).toThrow(/version 0\.1\.9/);
-    expect(() => planFor(v, 'beta')).toThrow(/latest or preview/);
-  });
-
-  describe('main()', () => {
-    const run = uploadR2.main as (
-      argv: string[],
-      env: Record<string, string | undefined>,
-      exec: (cmd: string, args: string[], env: Record<string, string | undefined>) => void,
-      log: (line: string) => void,
-    ) => number;
-    const secrets = {
-      R2_ACCOUNT_ID: 'acct123',
-      R2_ACCESS_KEY_ID: 'AKID',
-      R2_SECRET_ACCESS_KEY: 'shh-secret',
-      R2_BUCKET: 'githappens-downloads',
-    };
-    const setup = (): string[] => {
-      const v = '0.2.0';
-      const b = defaultBuild(v);
-      const dist = path.join(dir, 'dist');
-      const manifests = path.join(dir, 'manifests');
-      fs.mkdirSync(dist);
-      fs.mkdirSync(manifests);
-      // Per-arch *.yml and builder-debug.yml also land in dist/ (dist-* artifacts); they are ignored.
-      for (const n of [...b.artifacts, 'builder-debug.yml', 'latest.yml'])
-        fs.writeFileSync(path.join(dist, n), 'x');
-      for (const [suffix, urls] of Object.entries(b.manifests)) {
-        const name = suffix === 'yml' ? 'latest.yml' : `latest-${suffix}`;
-        fs.writeFileSync(path.join(manifests, name), manifestText(v, urls));
-      }
-      const work = ['--work-dir', path.join(dir, 'work')];
-      return ['--version', v, '--channel', 'latest', '--dist', dist, '--manifests', manifests, ...work];
-    };
-
-    it('skips with a notice (exit 0) when the R2 settings are missing', () => {
-      const calls: string[][] = [];
-      const lines: string[] = [];
-      const code = run(
-        setup(),
-        { R2_ACCOUNT_ID: 'x' },
-        (_c, a) => calls.push(a),
-        (l) => lines.push(l),
-      );
-      expect(code).toBe(0);
-      expect(calls).toEqual([]);
-      expect(lines.join('\n')).toMatch(
-        /^::notice title=R2 upload skipped::R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET/,
-      );
-    });
-
-    it('--dry-run prints the aws commands in upload order and runs nothing', () => {
-      const calls: string[][] = [];
-      const lines: string[] = [];
-      const code = run(
-        [...setup(), '--dry-run'],
-        secrets,
-        (_c, a) => calls.push(a),
-        (l) => lines.push(l),
-      );
-      expect(code).toBe(0);
-      expect(calls).toEqual([]);
-      const cmds = lines.filter((l) => l.startsWith('aws s3 cp '));
-      // 15 artifacts + 10 fixed copies + version.json + 3 manifests
-      expect(cmds).toHaveLength(29);
-      expect(cmds[0]).toContain('s3://githappens-downloads/releases/');
-      expect(cmds[0]).toContain('--endpoint-url https://acct123.r2.cloudflarestorage.com --region auto');
-      expect(cmds[0]).toContain("--cache-control 'public, max-age=31536000, immutable'");
-      expect(cmds.at(-1)).toMatch(
-        /s3:\/\/githappens-downloads\/releases\/latest\.yml .*--cache-control 'no-cache, max-age=0'/,
-      );
-      expect(lines.join('\n')).not.toContain('shh-secret');
-    });
-
-    it('runs aws with argv arrays, credentials only in the environment', () => {
-      const calls: { cmd: string; args: string[]; env: Record<string, string | undefined> }[] = [];
-      const code = run(
-        setup(),
-        secrets,
-        (cmd, args, env) => calls.push({ cmd, args, env }),
-        () => undefined,
-      );
-      expect(code).toBe(0);
-      expect(calls.every((c) => c.cmd === 'aws' && c.args[0] === 's3' && c.args[1] === 'cp')).toBe(true);
-      expect(calls.map((c) => c.args[3]).slice(-3)).toEqual([
-        's3://githappens-downloads/releases/latest-linux.yml',
-        's3://githappens-downloads/releases/latest-mac.yml',
-        's3://githappens-downloads/releases/latest.yml',
-      ]);
-      expect(calls.some((c) => c.args.join(' ').includes('shh-secret'))).toBe(false);
-      expect(calls[0]!.env).toMatchObject({
-        AWS_ACCESS_KEY_ID: 'AKID',
-        AWS_SECRET_ACCESS_KEY: 'shh-secret',
-        AWS_DEFAULT_REGION: 'auto',
-      });
-      // version.json is written before its upload and lists the fixed copies.
-      const vj = calls.find((c) => c.args[3]?.endsWith('/latest/version.json'))!;
-      const json = JSON.parse(fs.readFileSync(vj.args[2]!, 'utf8')) as VersionJson;
-      expect(json.version).toBe('0.2.0');
-      expect(json.files['mac-arm64-dmg']).toBe(
-        'https://downloads.githappens.dev/latest/GitHappens-mac-arm64.dmg',
-      );
-    });
+  it('release.yml: draft → per-arch assets → merged manifests → prerelease (preview) or latest (stable)', () => {
+    const rel = workflow('release.yml') as Workflow & { permissions?: Record<string, string> };
+    expect(rel.permissions).toEqual({ contents: 'write' });
+    expect(Object.keys(rel.jobs).sort()).toEqual(['build', 'prepare', 'publish']);
+    const create = rel.jobs.prepare!.steps!.find((s) => (s.run ?? '').includes('gh release create'))!;
+    expect(create.run).toContain('--draft');
+    expect(create.run).toContain('--prerelease');
+    const upload = rel.jobs.build!.steps!.find((s) => s.name === 'Upload to the draft release')!;
+    expect(upload.run).toContain('*.blockmap');
+    expect(upload.run).not.toContain('*.yml');
+    const steps = rel.jobs.publish!.steps!;
+    const names = steps.map((s) => s.name ?? s.uses ?? '');
+    const merged = names.indexOf('Upload merged manifests');
+    const published = names.indexOf('Publish release');
+    expect(merged).toBeGreaterThan(-1);
+    expect(published).toBeGreaterThan(merged); // clients never see a release without its manifests
+    const run = steps[published]!.run!;
+    expect(run).toContain('--draft=false');
+    expect(run).toContain('flags+=(--prerelease)');
+    expect(run).toContain('flags+=(--latest)');
   });
 });

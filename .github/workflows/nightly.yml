@@ -1,9 +1,9 @@
 # Spec 15 §6.6 (3): nightly preview-channel build from `main`.
 # Version = next patch of apps/desktop/package.json + `-preview.<yyyymmdd>` (e.g. 0.1.1-preview.20261009),
-# so release.yml builds with `-c.publish.channel=preview`: electron-builder emits preview.yml /
-# preview-mac.yml / preview-linux*.yml, which go to R2 `releases/` next to the installers, with fixed-name
-# copies in `preview/` (docs/releases.md). The GitHub release (private repo) is an internal prerelease
-# record. Clients on the Preview channel (UpdaterService: channel 'preview') pick it up.
+# so release.yml builds with `-c.publish.channel=preview` (electron-builder emits preview.yml /
+# preview-mac.yml / preview-linux*.yml) and publishes a GitHub prerelease tagged v<version>
+# (docs/releases.md). Clients on the Preview channel (UpdaterService: channel 'preview', allowPrerelease)
+# pick it up; Stable clients only follow the latest non-prerelease release.
 name: Nightly (preview)
 
 on:

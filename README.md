@@ -39,22 +39,21 @@ pnpm dev            # run the app with hot reload
 for Windows, macOS (Apple Silicon and Intel) and Linux (AppImage, deb, rpm, tar.gz). Installed apps
 update themselves from the Stable or Preview channel (_Preferences → Updates_).
 
-Installers and the update feed are hosted on Cloudflare R2 at `https://downloads.githappens.dev`. The
-newest stable build always has the same URLs, e.g.
-`https://downloads.githappens.dev/latest/GitHappens-Setup-x64.exe`. See
-[docs/releases.md](docs/releases.md) for the bucket layout, the fixed file names, `version.json`, the
-required GitHub secrets and the one-time Cloudflare setup.
+Installers and the update feed are on [GitHub Releases](https://github.com/roboza/githappens/releases).
+Asset names carry no version, so the newest stable build always has the same URLs, e.g.
+`https://github.com/roboza/githappens/releases/latest/download/GitHappens-Setup-x64.exe`. See
+[docs/releases.md](docs/releases.md) for the file names, stable vs preview, and the release pipeline.
 
 GitHub Actions builds every OS/arch, smoke-tests each package (the packaged app opens a repo, finds
-its bundled git and runs a terminal), then uploads to R2:
+its bundled git and runs a terminal), then publishes a GitHub release:
 
-| Workflow                    | When                                                                      | Result                                          |
-| --------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------- |
-| **Nightly** (`nightly.yml`) | 03:00 UTC daily if `main` changed; or Actions → Nightly → Run workflow    | `X.Y.Z-preview.YYYYMMDD` on the Preview channel |
-| **Release** (`release.yml`) | Push a tag `vX.Y.Z` matching `apps/desktop/package.json`; or Run workflow | `X.Y.Z` on the Stable channel and in `latest/`  |
+| Workflow                    | When                                                                      | Result                                               |
+| --------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Nightly** (`nightly.yml`) | 03:00 UTC daily if `main` changed; or Actions → Nightly → Run workflow    | `X.Y.Z-preview.YYYYMMDD` prerelease, Preview channel |
+| **Release** (`release.yml`) | Push a tag `vX.Y.Z` matching `apps/desktop/package.json`; or Run workflow | `X.Y.Z` release marked latest, Stable channel        |
 
-Each run also attaches the files to a GitHub release in this private repo and to the run's
-**Artifacts** (`dist-<os>`, kept 14 days), for maintainers only.
+While this repository is private, release assets can't be downloaded publicly and installed apps
+can't auto-update; both start working once it is public.
 
 To cut a release: bump `apps/desktop/package.json` `version`, add a `CHANGELOG.md` entry, commit, then
 `git tag v<version> && git push origin v<version>`.

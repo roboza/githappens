@@ -6,12 +6,14 @@ import type { AppUpdater } from 'electron-updater';
 import type { UpdateChannel, UpdateStatus, WhatsNew } from '../../shared/ipc/update-contract';
 import { readJson, writeFileAtomic } from '../settings/atomic-file';
 
+/** GitHub repository that hosts releases (electron-builder.yml `publish`: provider github). */
+export const RELEASES_REPO = { owner: 'roboza', repo: 'githappens' } as const;
 /**
- * Where people download installers: the website's download section, which links the fixed-name files on
- * the R2 download host (docs/releases.md). Used for the deb/rpm "download the new version" link. The
- * update feed itself is the generic provider in electron-builder.yml `publish`.
+ * The newest stable GitHub release, which lists every installer (docs/releases.md). Used for the deb/rpm
+ * "download the new version" link. The update feed itself is the github provider in electron-builder.yml
+ * `publish`, baked into the app as app-update.yml.
  */
-export const RELEASES_URL = 'https://githappens.dev/#download';
+export const RELEASES_URL = `https://github.com/${RELEASES_REPO.owner}/${RELEASES_REPO.repo}/releases/latest`;
 export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 /** The subset of electron-updater's `AppUpdater` we use — a fake implements it in tests. */
@@ -342,10 +344,12 @@ export class UpdaterService {
     const channel = this.safeChannel();
     if (!this.listening) this.listen();
     if (channel === 'preview') {
-      // electron-updater reads `preview.yml` / `preview-mac.yml` / `preview-linux.yml`.
+      // GitHub provider: allowPrerelease makes it look past /releases/latest at the newest `-preview.N`
+      // prerelease in the releases feed and read its `preview.yml` / `preview-mac.yml` / `preview-linux.yml`.
       u.channel = 'preview';
       u.allowPrerelease = true;
     } else {
+      // Stable: only the latest non-prerelease release (/releases/latest) and its latest*.yml.
       u.channel = 'latest';
       u.allowPrerelease = false;
     }
