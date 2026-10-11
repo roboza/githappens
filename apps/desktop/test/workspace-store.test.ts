@@ -96,7 +96,6 @@ describe('WorkspaceStore (spec 11 §7 step 2)', () => {
     const removed = s.removeRepos(w.id, [after.repos[0]!.id]);
     expect(removed.repos.map((r) => r.name)).toEqual(['Two', 'api']);
     const located = s.setRepoPath(w.id, removed.repos[1]!.id, path.join(dir, 'api'), 'https://x/acme/api');
-    // macOS /tmp and /private/tmp are the same directory with different spellings; normalize before compare.
     expect(path.resolve(located.localPath)).toBe(path.resolve(path.join(dir, 'api')));
     expect(located.remoteUrl).toBe('https://x/acme/api');
   });
