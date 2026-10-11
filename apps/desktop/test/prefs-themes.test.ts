@@ -224,8 +224,15 @@ describe('ThemeService', () => {
     const svc = new ThemeService({ dir, debounceMs: 30, onChanged });
     svc.watch();
     try {
-      fs.writeFileSync(path.join(dir, 'w.jsonc'), THEME);
-      await vi.waitFor(() => expect(onChanged).toHaveBeenCalled(), { timeout: 3000 });
+      // macOS FSEvents can miss writes made right after the watcher starts: keep touching the file
+      // until an event arrives.
+      await vi.waitFor(
+        () => {
+          if (!onChanged.mock.calls.length) fs.writeFileSync(path.join(dir, 'w.jsonc'), THEME);
+          expect(onChanged).toHaveBeenCalled();
+        },
+        { timeout: 10_000, interval: 200 },
+      );
       expect(onChanged.mock.calls.flat(2)).toContain('user:w');
     } finally {
       svc.dispose();
