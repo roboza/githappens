@@ -77,9 +77,14 @@ async function withTempIndex<T>(
   const env = { GIT_INDEX_FILE: file };
   try {
     const real = path.join(svc.repo.gitDir, 'index');
-    // copying keeps the stat cache, so `add -A` only re-hashes files that actually changed
-    if (seed === 'copy' && fs.existsSync(real)) fs.copyFileSync(real, file);
-    else await svc.runRead(['read-tree', 'HEAD'], { env });
+    // copying keeps the stat cache, so `add -A` only re-hashes files that actually changed. Keep the
+    // original's mtime too: git's racy-clean check compares entries against the index file's mtime, and a
+    // fresh one would make same-size edits from the index's last-write second look unchanged.
+    if (seed === 'copy' && fs.existsSync(real)) {
+      const st = fs.statSync(real);
+      fs.copyFileSync(real, file);
+      fs.utimesSync(file, st.atime, st.mtime);
+    } else await svc.runRead(['read-tree', 'HEAD'], { env });
     return await fn(env);
   } finally {
     fs.rmSync(file, { force: true });

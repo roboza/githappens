@@ -279,7 +279,12 @@ export class UndoGit {
     const file = path.join(this.tmpDir(), `index-${randomUUID()}`);
     if (seed === 'copy') {
       const real = path.join(this.service.repo.gitDir, 'index');
-      if (fs.existsSync(real)) fs.copyFileSync(real, file);
+      if (fs.existsSync(real)) {
+        // keep the original mtime: git's racy-clean check compares entries against the index file's mtime
+        const st = fs.statSync(real);
+        fs.copyFileSync(real, file);
+        fs.utimesSync(file, st.atime, st.mtime);
+      }
     }
     try {
       return await fn({ GIT_INDEX_FILE: file });

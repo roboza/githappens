@@ -131,8 +131,15 @@ test.describe('history tools', () => {
 
   const menu = async (rowText: string, item: RegExp | string) => {
     const graph = s.page.getByRole('grid', { name: 'Commit graph' });
-    await graph.getByText(rowText, { exact: true }).click({ button: 'right' });
-    await s.page.getByRole('menuitem', { name: item }).click();
+    const entry = s.page.getByRole('menuitem', { name: item });
+    // The graph may still be re-rendering after the previous test (e.g. an undo removing a row), so
+    // rows can shift under the cursor on slow runners: retry until the intended commit's menu is open.
+    await expect(async () => {
+      if (await s.page.getByRole('menu').isVisible()) await s.page.keyboard.press('Escape');
+      await graph.getByText(rowText, { exact: true }).click({ button: 'right' });
+      await expect(entry).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+    await entry.click();
   };
 
   test('cherry-pick a commit onto main, then undo it', async () => {
@@ -150,7 +157,7 @@ test.describe('history tools', () => {
     const git = gitIn(s.repo);
     const before = git('rev-parse', 'HEAD');
     const target = git('log', '--format=%H', '--grep=^Add config$', '-n', '1');
-    await menu('Add config', /^Reset main to .* \(hard\)$/);
+    await menu('Add config', `Reset main to ${target.slice(0, 7)} (hard)`);
     await s.page.getByRole('button', { name: 'Reset hard' }).click();
     await expect.poll(() => git('rev-parse', 'HEAD'), { timeout: 20_000 }).toBe(target);
     expect(git('status', '--porcelain')).toBe('');
@@ -217,8 +224,12 @@ test.describe('history tools', () => {
     const term = s.page.locator('.xterm');
     await expect(term).toBeVisible({ timeout: 15_000 });
     await term.click();
-    await s.page.keyboard.type('git status\r');
-    await expect(s.page.locator('.xterm-rows')).toContainText('On branch main', { timeout: 20_000 });
+    const rows = s.page.locator('.xterm-rows');
+    // Wait for the shell to echo the command before pressing Enter: a slow shell start can drop it.
+    await s.page.keyboard.type('git status');
+    await expect(rows).toContainText('git status', { timeout: 20_000 });
+    await s.page.keyboard.press('Enter');
+    await expect(rows).toContainText('On branch main', { timeout: 20_000 });
     await s.page.screenshot({ path: path.join(shots, 'phase3-terminal.png') });
   });
 

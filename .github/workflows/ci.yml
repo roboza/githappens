@@ -47,9 +47,21 @@ jobs:
         run: pnpm test:coverage
       - name: Build
         run: pnpm build
-      - name: E2E smoke (Linux needs a virtual display)
+      # Linux needs a virtual display, plus an unlocked Secret Service keyring: without one Electron's
+      # safeStorage falls back to `basic_text`, which the SecretStore refuses (API keys, cloud sign-in).
+      # Playwright forces `--password-store=basic`; GITHAPPENS_PASSWORD_STORE re-selects libsecret.
+      - name: Install keyring (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum pnpm --filter @githappens/desktop test:e2e
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gnome-keyring dbus-x11
+      - name: E2E smoke (Linux)
+        if: runner.os == 'Linux'
+        env:
+          GITHAPPENS_PASSWORD_STORE: gnome-libsecret
+        run: |
+          dbus-run-session -- sh -c '
+            echo -n ci | gnome-keyring-daemon --unlock --components=secrets >/dev/null &&
+            xvfb-run --auto-servernum pnpm --filter @githappens/desktop test:e2e
+          '
       - name: E2E smoke
         if: runner.os != 'Linux'
         run: pnpm --filter @githappens/desktop test:e2e

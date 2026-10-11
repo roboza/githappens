@@ -377,7 +377,8 @@ describeGit('Code Suggest end to end (spec 14 §6.4)', () => {
     expect(git(session.worktreePath, 'rev-parse', 'HEAD')).toBe(headSha);
     expect(svc.sessions().map((s) => s.sessionId)).toEqual([session.sessionId]);
     fs.writeFileSync(path.join(session.worktreePath, 'a.txt'), 'alpha\nfeature\nsuggested\n');
-    fs.writeFileSync(path.join(session.worktreePath, 'b.txt'), 'BETA\n'); // a file outside the PR diff
+    // a file outside the PR diff; same size, same second as the checkout (racy-clean for git's stat check)
+    fs.writeFileSync(path.join(session.worktreePath, 'b.txt'), 'BETA\n');
     fs.writeFileSync(path.join(session.worktreePath, 'new.txt'), 'brand new\n');
     expect((await svc.changes(session.sessionId)).files.map((f) => f.path).sort()).toEqual([
       'a.txt',

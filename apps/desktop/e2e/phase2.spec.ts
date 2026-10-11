@@ -155,7 +155,7 @@ test('stash changes from the toolbar and pop them back', async () => {
 
 test('command palette runs Fetch All', async () => {
   await page.getByRole('grid', { name: 'Commit graph' }).click();
-  await page.keyboard.press('Control+p');
+  await page.keyboard.press('ControlOrMeta+p');
   const palette = page.getByRole('dialog', { name: /command palette/i });
   await expect(palette).toBeVisible();
   await page.keyboard.type('fetch all');
