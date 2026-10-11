@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "description": "Cross-platform desktop Git GUI. See specs/.",
+  "license": "Apache-2.0",
   "packageManager": "pnpm@11.3.0",
   "engines": {
     "node": ">=22"

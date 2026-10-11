@@ -2,73 +2,154 @@
 
 # GitHappens
 
-A cross-platform desktop Git client built around a fast, interactive commit graph: Electron, React and TypeScript, with the Git command line doing the work.
+[![CI](https://github.com/roboza/githappens/actions/workflows/ci.yml/badge.svg)](https://github.com/roboza/githappens/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/roboza/githappens?include_prereleases&label=release)](https://github.com/roboza/githappens/releases)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-- **Website:** [githappens.dev](https://githappens.dev).
+A cross-platform desktop Git client built around a fast, interactive commit graph. Electron, React and
+TypeScript on the outside, the real Git command line doing the work underneath.
 
-- **Specs:** [`specs/`](specs/README.md). Start with [`00-overview.md`](specs/00-overview.md), then the roadmap in [`15-packaging-testing-roadmap.md`](specs/15-packaging-testing-roadmap.md).
-- **Status:** Phase 0 (Foundations) is complete.
+**[Download](https://githappens.dev/#download)** · **[Website](https://githappens.dev)** ·
+**[Changelog](apps/desktop/CHANGELOG.md)** · **[Specs](specs/README.md)**
 
-## Requirements
+## Contents
+
+- [Features](#features)
+- [Status](#status)
+- [Install](#install)
+- [Development](#development)
+- [Testing](#testing)
+- [Releases](#releases)
+- [Cloud features (optional)](#cloud-features-optional)
+- [Project layout](#project-layout)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+- **Commit graph:** lanes, ref labels, search and filters, _Jump to HEAD_. Virtualized and canvas
+  drawn, so it stays fast on very large histories.
+- **Everyday Git:** stage, unstage and discard by file, hunk or line; commit and amend; branches and
+  tags; fetch, pull and push with credential prompts and SSH agent support; stashes; clone and init.
+- **Undo / redo** for the core actions, backed by a journal.
+- **Power operations:** drag and drop to merge, rebase, fast-forward or push; cherry-pick, revert and
+  reset; interactive rebase editor; built-in 3-way merge tool or your external one; conflict prediction
+  against the target branch with `git merge-tree`.
+- **Files:** Monaco diff viewer (unified or split), file history, blame and an in-app editor.
+- **Submodules, worktrees and Git LFS.**
+- **Integrated terminal** with git autocomplete.
+- **Command palette,** keyboard shortcuts, custom keybindings, themes and settings profiles.
+- **Bundled Git:** works with no Git installed. It can also use your system Git (2.36+) or a custom path.
+- **Secrets stay encrypted** in the OS keychain. Nothing is stored in plain text.
+
+On `main`, not yet in a release: provider integrations (GitHub, GitLab, Bitbucket, Azure DevOps, Jira),
+workspaces and the Launchpad, AI features with your own API key, Git Flow, and the optional
+[self-hosted cloud](#cloud-features-optional).
+
+## Status
+
+**Beta.** [0.1.0](apps/desktop/CHANGELOG.md) is the first beta and contains Phases 0–3 of the
+[roadmap](specs/15-packaging-testing-roadmap.md#8-phased-roadmap) (foundations, read-only viewer,
+everyday Git, power operations). Phases 4–6 (integrations, productivity, cloud) are in development on
+`main`.
+
+Supported platforms: Windows 10+, macOS 12+ (Apple Silicon and Intel) and Linux (Ubuntu 22.04+ or
+equivalent).
+
+## Install
+
+Download an installer from **[githappens.dev](https://githappens.dev/#download)** or
+[GitHub Releases](https://github.com/roboza/githappens/releases). There are builds for Windows, macOS
+and Linux (AppImage, deb, rpm, tar.gz), each for x64 and arm64 (Apple Silicon). Installed apps update
+themselves from the **Stable** or **Preview** channel (_Preferences → Updates_). Only the AppImage
+updates itself on Linux; deb, rpm and tar.gz installs show a link to the download page instead.
+
+Builds made without signing secrets are unsigned:
+
+- **Windows:** SmartScreen warns "unrecognized app" → _More info_ → _Run anyway_.
+- **macOS:** ad-hoc signed, not notarized. After copying to Applications, run
+  `xattr -cr /Applications/GitHappens.app` (or right-click → _Open_) once.
+- **Linux:** `chmod +x GitHappens-*.AppImage` (needs `libfuse2`), or install the `.deb` / `.rpm`.
+
+**Command line:** the Windows installer and the deb/rpm packages put a `githappens` command on the
+`PATH`. On macOS, or for the AppImage and zip builds, use _Help → Install "githappens" Command in PATH_.
+Then `githappens .` or `githappens -p <path>` opens a repository.
+
+## Development
+
+### Requirements
 
 - Node 22+
 - pnpm 11 (`corepack enable`)
 - Git on `PATH`, for tests and fixtures only. The app itself uses its bundled Git.
 
-## Getting started
+### Getting started
 
 ```bash
 pnpm install        # also downloads the bundled portable Git (dugite) and Electron
 pnpm dev            # run the app with hot reload
 ```
 
-| Command                                      | What it does                                                          |
-| -------------------------------------------- | --------------------------------------------------------------------- |
-| `pnpm dev`                                   | Start the desktop app in development mode                             |
-| `pnpm build`                                 | Production build of main, preload and renderer (`apps/desktop/out`)   |
-| `pnpm typecheck`                             | `tsc` for every package                                               |
-| `pnpm lint` / `pnpm format`                  | ESLint / Prettier                                                     |
-| `pnpm test`                                  | Unit and integration tests (Vitest) in every package                  |
-| `pnpm --filter @githappens/desktop test:e2e` | Playwright smoke tests against the built app (run `pnpm build` first) |
-| `pnpm fixtures [name…] [--count=N]`          | Generate fixture repos into `test/fixtures/.repos`                    |
-| `pnpm --filter @githappens/desktop dist`     | Package installers with electron-builder                              |
+| Command                                  | What it does                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm dev`                               | Start the desktop app in development mode                           |
+| `pnpm build`                             | Production build of main, preload and renderer (`apps/desktop/out`) |
+| `pnpm typecheck`                         | `tsc` for every package                                             |
+| `pnpm lint` / `pnpm format`              | ESLint / Prettier (`pnpm format:check` to verify only)              |
+| `pnpm test`                              | Unit and integration tests (Vitest) in every package                |
+| `pnpm test:coverage`                     | Tests with each package's coverage thresholds (the CI gate)         |
+| `pnpm fixtures [name…] [--count=N]`      | Generate fixture repos into `test/fixtures/.repos`                  |
+| `pnpm bench`                             | Git engine benchmarks ([docs/performance.md](docs/performance.md))  |
+| `pnpm --filter @githappens/desktop dist` | Package installers with electron-builder                            |
 
-## Downloads & releases
+The repo is a pnpm workspace driven by [Turborepo](https://turbo.build/). The renderer has no Node
+access: everything goes through one typed IPC contract in `apps/desktop/src/shared/ipc`, exposed by the
+preload as an allowlisted `window.api`.
 
-**Download GitHappens from [githappens.dev](https://githappens.dev/#download).** There are installers
-for Windows, macOS (Apple Silicon and Intel) and Linux (AppImage, deb, rpm, tar.gz). Installed apps
-update themselves from the Stable or Preview channel (_Preferences → Updates_).
+## Testing
 
-Installers and the update feed are on [GitHub Releases](https://github.com/roboza/githappens/releases).
-Asset names carry no version, so the newest stable build always has the same URLs, e.g.
-`https://github.com/roboza/githappens/releases/latest/download/GitHappens-Setup-x64.exe`. See
-[docs/releases.md](docs/releases.md) for the file names, stable vs preview, and the release pipeline.
+```bash
+pnpm test                                     # Vitest, all packages
+pnpm build                                    # e2e runs against the built app
+pnpm --filter @githappens/desktop test:e2e    # Playwright end-to-end tests
+```
 
-GitHub Actions builds every OS/arch, smoke-tests each package (the packaged app opens a repo, finds
-its bundled git and runs a terminal), then publishes a GitHub release:
+- **Unit and integration tests** run against real Git processes and deterministic fixture repos
+  (`linear`, `branchy`, `conflict`, `submodules`, `worktrees`, `lfs`, `huge`, …). Some property tests
+  run thousands of random cases; timeouts are longer on CI, where runners are slower.
+- **End-to-end tests** launch the Electron app with Playwright. On Linux they need a display and an
+  unlocked keyring for the secret-store tests:
+
+  ```bash
+  dbus-run-session -- sh -c 'echo -n pw | gnome-keyring-daemon --unlock --components=secrets &&
+    GITHAPPENS_PASSWORD_STORE=gnome-libsecret xvfb-run --auto-servernum pnpm --filter @githappens/desktop test:e2e'
+  ```
+
+  `GITHAPPENS_PASSWORD_STORE` is needed because Playwright launches Electron with
+  `--password-store=basic`, which the secret store (correctly) refuses to use.
+
+- **CI** ([`ci.yml`](.github/workflows/ci.yml)) runs typecheck, lint, format, tests, build and e2e on
+  Windows, macOS and Linux, plus a job against the minimum supported Git (2.36). Nightly benchmarks run
+  in [`perf.yml`](.github/workflows/perf.yml).
+
+## Releases
+
+GitHub Actions builds every OS and architecture, smoke-tests each package (the packaged app opens a
+repo, finds its bundled Git and runs a terminal), then publishes a GitHub release:
 
 | Workflow                    | When                                                                      | Result                                               |
 | --------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------- |
 | **Nightly** (`nightly.yml`) | 03:00 UTC daily if `main` changed; or Actions → Nightly → Run workflow    | `X.Y.Z-preview.YYYYMMDD` prerelease, Preview channel |
 | **Release** (`release.yml`) | Push a tag `vX.Y.Z` matching `apps/desktop/package.json`; or Run workflow | `X.Y.Z` release marked latest, Stable channel        |
 
-While this repository is private, release assets can't be downloaded publicly and installed apps
-can't auto-update; both start working once it is public.
+Asset names carry no version, so the newest stable build always has the same URL, e.g.
+`https://github.com/roboza/githappens/releases/latest/download/GitHappens-Setup-x64.exe`. See
+[docs/releases.md](docs/releases.md) for file names, channels and the pipeline.
 
-To cut a release: bump `apps/desktop/package.json` `version`, add a `CHANGELOG.md` entry, commit, then
-`git tag v<version> && git push origin v<version>`.
-
-Unsigned builds (no signing secrets configured — see the header of `release.yml`):
-
-- **Windows:** SmartScreen warns "unrecognized app" → _More info_ → _Run anyway_.
-- **macOS:** builds are ad-hoc signed, not notarized. After copying to Applications run
-  `xattr -cr /Applications/GitHappens.app` (or right-click → _Open_) once.
-- **Linux:** `chmod +x GitHappens-*.AppImage` (needs `libfuse2`), or install the `.deb` / `.rpm`. Only
-  the AppImage updates itself; deb/rpm/tar.gz installs get a link to the download page.
-
-**Command line:** the Windows installer and the deb/rpm packages put a `githappens` command on the `PATH`
-(on macOS, or for the AppImage/zip, use _Help → Install "githappens" Command in PATH_). Then
-`githappens .` or `githappens -p <path>` opens a repository.
+To cut a release: bump `version` in `apps/desktop/package.json`, add a section to
+[`CHANGELOG.md`](apps/desktop/CHANGELOG.md) (shown in-app as "What's new"), commit, then
+`git tag v<version> && git push origin v<version>`. Code signing secrets are listed in the header of
+`release.yml`.
 
 ## Cloud features (optional)
 
@@ -126,7 +207,7 @@ the developer login.
 The full environment variable list, key rotation and Postgres-only setup are in
 [services/cloud/README.md](services/cloud/README.md).
 
-## Layout
+## Project layout
 
 ```
 apps/desktop          Electron app
@@ -134,7 +215,7 @@ apps/desktop          Electron app
   src/preload         contextBridge → window.api (allowlisted, typed)
   src/shared          IPC contract + settings registry (shared by main/preload/renderer)
   src/renderer        React UI (no Node access; ESLint-enforced)
-  e2e                 Playwright smoke tests
+  e2e                 Playwright end-to-end tests
 packages/git          git engine: process runner, parsers, operations, undo journal (spec 02/05)
 packages/graph        commit graph layout (spec 04)
 packages/providers    GitHub / GitLab / Bitbucket / Azure DevOps / Jira clients + OAuth helpers (spec 10)
@@ -144,18 +225,25 @@ services/cloud        self-hostable GitHappens Cloud server (spec 14)
 services/oauth-broker OAuth code exchange for providers that need a client secret (spec 10)
 test/fixtures         deterministic fixture repo generators (spec 15 §7.2)
 specs                 product & engineering specs
+docs                  release pipeline and performance notes
 website               githappens.dev static site, deployed to GitHub Pages by .github/workflows/pages.yml
 ```
 
-## Phase 0 deliverables (spec 15 §8)
+The [specs](specs/README.md) describe each area in detail. Start with
+[`00-overview.md`](specs/00-overview.md).
 
-1. **Monorepo:** pnpm workspaces, Turborepo, electron-vite, React, theme tokens (`--kl-*`), ESLint, Prettier, Husky and CI on all three OSes, plus a job that tests against git 2.36.
-2. **Typed IPC:** one contract in `src/shared/ipc`. Handler coverage is checked at compile time. Every call returns `IpcResult<T>`. The preload exposes allowlisted channels only, and untrusted senders are rejected.
-3. **Git engine:**
-   - `GitLocator` picks bundled git, system git or a custom path, falls back when one fails, resolves the login-shell env and detects features from the git version.
-   - `GitProcessRunner` sets the env policy and redaction, runs with no shell, cancels by killing the whole process tree, and handles timeouts, the output buffer cap, a priority-based concurrency cap, streaming and progress parsing.
-   - Git's error messages are mapped to the typed error list in spec 02.
-4. **Stores:**
-   - `SettingsStore` reads a typed registry validated with zod. It writes only non-default values, writes files atomically, backs up corrupt files, runs migrations, and creates the Default profile on first run.
-   - `EncryptedFileSecretStore` uses Electron `safeStorage` and encrypts the whole map, so account names aren't in plain text either. It refuses to store anything when no keyring is available.
-5. **Fixtures:** `linear`, `branchy`, `conflict(-in-progress)`, `empty`, `bare`, `remote-pair`, `unicode-paths`, `submodules`, `worktrees`, `huge` (fast-import) and `lfs`. All are deterministic.
+## Contributing
+
+Issues and pull requests are welcome on [GitHub](https://github.com/roboza/githappens).
+
+1. Fork and create a branch from `main`.
+2. `pnpm install` sets up a Husky pre-commit hook that runs ESLint and Prettier on staged files.
+3. Before opening a PR, run `pnpm typecheck`, `pnpm lint`, `pnpm format:check` and `pnpm test`.
+4. Add or update tests for behaviour changes. User-visible changes get an entry under
+   `## [Unreleased]` in [`CHANGELOG.md`](apps/desktop/CHANGELOG.md).
+
+CI must pass on all three operating systems before merging.
+
+## License
+
+[Apache License 2.0](LICENSE). Copyright 2026 Robert Oswald and GitHappens contributors; see [NOTICE](NOTICE).
