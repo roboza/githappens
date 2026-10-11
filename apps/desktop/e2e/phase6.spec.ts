@@ -468,7 +468,7 @@ test('cloud patch: share WIP from alpha (e2e link), open and apply it in bravo, 
 
   const palette = async (): Promise<void> => {
     await pageA.getByRole('grid', { name: 'Commit graph' }).click();
-    await pageA.keyboard.press('Control+p');
+    await pageA.keyboard.press('ControlOrMeta+p');
     await expect(pageA.getByRole('dialog', { name: /command palette/i })).toBeVisible();
     await pageA.keyboard.type('Open Cloud Patch link');
     await pageA.keyboard.press('Enter');
@@ -633,7 +633,7 @@ test('machine without cloud: conflict prevention vs origin/main; a key-less patc
     // (Machine A keeps the keys of patches it created, so it is not a valid "recipient" for this check.)
     expect(patchLink).not.toBe('');
     await page.getByRole('grid', { name: 'Commit graph' }).click();
-    await page.keyboard.press('Control+p');
+    await page.keyboard.press('ControlOrMeta+p');
     await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();
     await page.keyboard.type('Open Cloud Patch link');
     await page.keyboard.press('Enter');

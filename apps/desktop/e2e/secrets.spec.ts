@@ -437,7 +437,7 @@ test('secrets entered through every path stay in the SecretStore', async () => {
   await invoke('settings:set', { key: 'git.useCredentialHelpers', value: false });
   const fetchAll = async (): Promise<void> => {
     await page.getByRole('grid', { name: 'Commit graph' }).click();
-    await page.keyboard.press('Control+p');
+    await page.keyboard.press('ControlOrMeta+p');
     await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();
     await page.keyboard.type('fetch all');
     await page.keyboard.press('Enter');

@@ -7,6 +7,8 @@ process.env.GITHAPPENS_WINDOW_SIZE ??= '1024x768';
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
+  // Hosted runners (macOS especially) can be several times slower than a dev machine.
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   // Each worker runs a full Electron app plus git; more than a few in parallel starves them.
   // Serial on CI: shared runners have few cores and several Electron + git processes at once made
   // timing-sensitive specs flaky. Locally 3 workers keep the suite fast.
