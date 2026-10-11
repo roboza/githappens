@@ -65,5 +65,11 @@
     "react-dom": "^19.3.0",
     "vite": "^7.3.7",
     "zustand": "^5.0.15"
-  }
+  },
+  "homepage": "https://githappens.dev",
+  "author": {
+    "name": "GitHappens contributors",
+    "url": "https://githappens.dev"
+  },
+  "desktopName": "githappens.desktop"
 }

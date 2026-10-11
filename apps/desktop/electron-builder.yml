@@ -96,6 +96,9 @@ linux:
   icon: build/icon.png
   # Stable binary name inside linux-unpacked / the AppImage (the package name is scoped).
   executableName: githappens
+  # The window's WM_CLASS / app_id must match githappens.desktop (package.json desktopName) so desktops
+  # group the running window with its launcher entry.
+  syncDesktopName: true
   # deb/rpm link /usr/bin/githappens to this launcher (after-install.sh); see also CliInstaller.
   extraResources:
     - from: build/bin/githappens
