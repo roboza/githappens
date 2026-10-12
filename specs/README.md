@@ -30,6 +30,15 @@ This folder holds the implementation specs for **GitHappens**, a cross-platform 
 | 14 | [14-cloud-and-team-features.md](14-cloud-and-team-features.md) | Optional backend: account and settings sync, Cloud Patches, Code Suggest, team view, insights; backend-free conflict prevention | 489 |
 | 15 | [15-packaging-testing-roadmap.md](15-packaging-testing-roadmap.md) | Monorepo tooling, bundled git, electron-builder targets, auto-update, CI, testing strategy, phased roadmap | 200 |
 
+## Feature folders
+
+Larger features that span several areas get their own folder with a README and numbered files.
+
+| Folder | Feature | Status |
+|---|---|---|
+| [hive/](hive/README.md) | **Hive**: run and supervise several AI coding agents in parallel, each in its own worktree lane, with live status, review and landing, task intake, coordination and a graph lens. Supersedes the Agent Sessions view (spec 12 §4.12). Includes a competitive landscape and gap analysis ([00-landscape-and-gaps.md](hive/00-landscape-and-gaps.md)). | Draft spec (README + 01–11), open questions in the README |
+| [spyglass/](spyglass/) | **Spyglass**: VS Code extension (inline blame, hovers, annotations, history, side-bar views, graph panel) that hands off to the GitHappens app | Paused, partial (01–03) |
+
 ## Open decisions and items to verify
 
 These are items marked *(inferred)* or flagged as our own extensions that most need a human decision or verification against provider documentation:

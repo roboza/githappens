@@ -188,6 +188,8 @@ Global: when AI is disabled (pref or org policy), all sparkle buttons are hidden
 | Open repo in editor | Ctrl+Shift+E | Cmd+Shift+E |
 
 ### 4.12 Agent Sessions view *(inferred)*
+> **Superseded by [Hive](hive/README.md).** Hive grows this view into full agent orchestration; it keeps the detector and status heuristic below as its fallback signal and migrates the `agents:*` channels (see [hive/09-settings-and-commands.md](hive/09-settings-and-commands.md)). This section stays as the description of what ships today.
+
 An "Agents" mode for the left panel lists local coding-agent sessions per worktree. This subsection is our interpretation. It ships behind `ui.showAgentsToggle` (spec 13, default off).
 - **Toggle:** the left-panel header gets a segmented `List | Agents` control. `List` is the normal ref tree (spec 01). `Agents` replaces it with `<AgentSessionsPanel>`.
 - **Rows:** one group per worktree of the repo (spec 02 `git:worktrees`), showing the branch, folder name and WIP count (spec 02 `git:status { worktreePath }`). Under each worktree, one card per detected session shows agent kind (Claude Code, Codex CLI, GitHub Copilot CLI, Gemini CLI, or "Custom"), status (`running` / `waiting for input` / `idle` / `exited`), start time and the terminal tab it runs in.
