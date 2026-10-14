@@ -580,7 +580,8 @@ d('GitService (fixtures)', () => {
       const first = await c.next(500);
       const elapsed = performance.now() - t0;
       expect(first.commits).toHaveLength(500);
-      expect(elapsed).toBeLessThan(3000);
+      // Hosted CI runners are slower and noisier than a dev machine.
+      expect(elapsed).toBeLessThan(process.env.CI ? 6000 : 3000);
       const shas = new Set(first.commits.map((x) => x.sha));
       let merges = 0;
       for (;;) {
