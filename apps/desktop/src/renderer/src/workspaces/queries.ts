@@ -97,7 +97,7 @@ export const useBulkStore = create<BulkState>((set) => ({
     }),
 }));
 
-const OP_LABEL: Record<BulkOp, string> = { fetch: 'Fetch', pull: 'Pull', clone: 'Clone' };
+const OP_LABEL: Record<BulkOp, string> = { fetch: 'Fetch', pull: 'Pull', push: 'Push', clone: 'Clone' };
 
 function onBulkProgress(p: BulkOpProgress): void {
   const prev = useBulkStore.getState().runs[p.workspaceId];

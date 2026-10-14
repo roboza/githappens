@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { canonicalPath } from '../src/main/services/canonical-path';
-import type { Workspace } from '../src/shared/ipc/workspaces-contract';
+import { isRepoHidden, type Workspace } from '../src/shared/ipc/workspaces-contract';
 import { WorkspaceStore } from '../src/main/workspaces/workspace-store';
 
 describe('WorkspaceStore (spec 11 §7 step 2)', () => {
@@ -178,5 +178,63 @@ describe('WorkspaceStore (spec 11 §7 step 2)', () => {
     expect(copy!.id).not.toBe(w.id);
     expect(copy!.repos[0]!.id).not.toBe(w.repos[0]!.id);
     expect(s.list()).toHaveLength(2);
+  });
+
+  it('hides repos by path so directory re-scans keep them hidden', () => {
+    const s = make();
+    const w = s.create({
+      kind: 'directory',
+      name: 'd',
+      directory: { root: dir, depth: 2, includeNested: false, ignore: [] },
+      repos: [{ localPath: path.join(dir, 'a') }, { localPath: path.join(dir, 'b') }],
+    });
+    const [a, b] = w.repos;
+    s.setReposHidden(w.id, [a!.id], true);
+    expect(s.get(w.id).hiddenRepos).toEqual([a!.localPath]);
+
+    // `a` vanishes from the folder and comes back with a new id: still hidden.
+    s.syncRepos(w.id, [{ localPath: path.join(dir, 'b') }]);
+    const back = s.syncRepos(w.id, [{ localPath: path.join(dir, 'b') }, { localPath: path.join(dir, 'a') }]);
+    const a2 = back.workspace.repos.find((r) => r.name === 'a')!;
+    expect(a2.id).not.toBe(a!.id);
+    expect(isRepoHidden(back.workspace, a2)).toBe(true);
+    expect(isRepoHidden(back.workspace, b!)).toBe(false);
+
+    // Persisted, and unhiding drops the key.
+    expect(make().get(w.id).hiddenRepos).toEqual([a!.localPath]);
+    s.setReposHidden(w.id, [a2.id], false);
+    expect(s.get(w.id).hiddenRepos).toBeUndefined();
+  });
+
+  it('keeps a hidden repo hidden when it is located, and forgets it when removed', () => {
+    const s = make();
+    const w = s.create({
+      kind: 'local',
+      name: 'l',
+      repos: [
+        {
+          provider: {
+            integrationKey: 'github:github.com:1',
+            owner: 'acme',
+            name: 'api',
+            cloneUrlHttps: 'https://x/acme/api',
+            cloneUrlSsh: '',
+            webUrl: '',
+          },
+        },
+        { localPath: path.join(dir, 'b') },
+      ],
+    });
+    const [api, b] = w.repos;
+    s.setReposHidden(w.id, [api!.id, b!.id], true);
+    expect(s.get(w.id).hiddenRepos).toEqual([api!.id, b!.localPath]);
+
+    fs.mkdirSync(path.join(dir, 'api'));
+    const located = s.setRepoPath(w.id, api!.id, path.join(dir, 'api'));
+    expect(s.get(w.id).hiddenRepos).toEqual([b!.localPath, located.localPath]);
+    expect(isRepoHidden(s.get(w.id), located)).toBe(true);
+
+    s.removeRepos(w.id, [b!.id]);
+    expect(s.get(w.id).hiddenRepos).toEqual([located.localPath]);
   });
 });

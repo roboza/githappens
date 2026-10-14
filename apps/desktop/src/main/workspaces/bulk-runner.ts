@@ -46,10 +46,13 @@ export interface BulkRunnerDeps {
 
 class Skip extends Error {}
 
+/** Push runs at most this many repos at once so credential prompts don't pile up. */
+export const PUSH_CONCURRENCY = 2;
+
 const plural = (n: number, w: string): string => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 /**
- * Bulk fetch / pull / clone across a workspace (spec 11 §6.3). Each repo runs independently: a
+ * Bulk fetch / pull / push / clone across a workspace (spec 11 §6.3). Each repo runs independently: a
  * failure is reported on its row and never aborts the batch; cancel aborts running repos and marks
  * the rest `skipped`.
  */
@@ -60,7 +63,7 @@ export class BulkRunner {
 
   start(req: BulkOpRequest): { bulkId: string; done: Promise<void> } {
     const ws = this.d.workspace(req.workspaceId);
-    if (!['fetch', 'pull', 'clone'].includes(req.op))
+    if (!['fetch', 'pull', 'push', 'clone'].includes(req.op))
       throw new Error(`Unsupported bulk operation: ${req.op}`);
     const wanted = new Set(req.repoIds);
     const repos = ws.repos.filter((r) => wanted.has(r.id));
@@ -70,7 +73,10 @@ export class BulkRunner {
     this.running.set(bulkId, controller);
     const limit = Math.max(
       1,
-      Math.min(16, Math.floor(req.options?.concurrency ?? this.d.concurrency()) || 4),
+      Math.min(
+        req.op === 'push' ? PUSH_CONCURRENCY : 16,
+        Math.floor(req.options?.concurrency ?? this.d.concurrency()) || 4,
+      ),
     );
     const done = this.run(bulkId, ws, repos, req, limit, controller.signal).finally(() =>
       this.running.delete(bulkId),
@@ -150,7 +156,45 @@ export class BulkRunner {
       );
       return 'Fetched';
     }
+    if (req.op === 'push') return this.push(repo.localPath, req, signal);
     return this.pull(repo.localPath, req, signal);
+  }
+
+  /**
+   * Plain push of the current branch (never forced). Repos with nothing to push, behind their
+   * upstream, detached or mid-operation are skipped; branches without an upstream are only pushed
+   * (to `origin`, tracking it) with `setUpstream`.
+   */
+  private async push(repoPath: string, req: BulkOpRequest, signal: AbortSignal): Promise<string> {
+    const st = await this.d.status.forPath(repoPath, true);
+    if (st.error) throw new Error(st.error);
+    if (st.operationInProgress) throw new Skip(`A ${st.operationInProgress} is in progress`);
+    const branch = st.head?.branch;
+    if (st.head?.detached || !branch) throw new Skip('Detached HEAD');
+    if (st.upstream) {
+      if (st.behind > 0) {
+        throw new Skip(st.ahead > 0 ? 'Diverged from upstream — pull first' : 'Behind — pull first');
+      }
+      if (!st.ahead) throw new Skip('Nothing to push');
+      // Empty remote/branch: the push op targets the configured upstream.
+      await this.withRepo(repoPath, (id) =>
+        this.d.runOp(id, { type: 'push', localRef: branch, remote: '', remoteBranch: '' }, signal),
+      );
+      return `Pushed ${plural(st.ahead, 'commit')}`;
+    }
+    if (!req.options?.setUpstream) throw new Skip('No upstream branch');
+    const remotes = await this.d.status.remotes(repoPath, signal);
+    const remote =
+      remotes.find((r) => r.name === 'origin')?.name ?? (remotes.length === 1 ? remotes[0]!.name : undefined);
+    if (!remote) throw new Skip(remotes.length ? 'No origin remote' : 'No remote');
+    await this.withRepo(repoPath, (id) =>
+      this.d.runOp(
+        id,
+        { type: 'push', localRef: branch, remote, remoteBranch: branch, setUpstream: true },
+        signal,
+      ),
+    );
+    return `Published to ${remote}/${branch}`;
   }
 
   private async pull(repoPath: string, req: BulkOpRequest, signal: AbortSignal): Promise<string> {

@@ -274,4 +274,102 @@ describe('BulkRunner (spec 11 §6.3)', () => {
     expect(final()).toEqual({ x: 'failed: Choose a folder to clone into.' });
     expect(() => runner.start({ workspaceId: 'ws', repoIds: [], op: 'fetch' })).toThrow(/No repositories/);
   });
+
+  it('push sends the current branch, skips what it must and publishes only when asked', async () => {
+    ws = workspace(
+      ['ahead', 'nothing', 'behind', 'diverged', 'detached', 'rebasing', 'newBranch', 'noRemote'].map((n) =>
+        repo(n),
+      ),
+    );
+    const status: Record<string, Summary> = {
+      ahead: okStatus({ ahead: 2 }),
+      nothing: okStatus(),
+      behind: okStatus({ behind: 1 }),
+      diverged: okStatus({ ahead: 1, behind: 1 }),
+      detached: okStatus({ head: { detached: true, sha: 'aaa' }, ahead: 1 }),
+      rebasing: okStatus({ operationInProgress: 'rebase', ahead: 1 }),
+      newBranch: okStatus({ upstream: undefined, head: { branch: 'feat/x', detached: false, sha: 'aaa' } }),
+      noRemote: okStatus({ upstream: undefined }),
+    };
+    const run = async (setUpstream: boolean) => {
+      events = [];
+      const ops: Array<[string, unknown]> = [];
+      const runner = new BulkRunner(
+        deps({
+          status: {
+            forPath: async (p) => status[path.basename(p)]!,
+            invalidate: () => undefined,
+            locate: async () => null,
+            remotes: async (p) =>
+              path.basename(p) === 'noRemote'
+                ? []
+                : [
+                    { name: 'upstream', url: 'u' },
+                    { name: 'origin', url: 'o' },
+                  ],
+          },
+          runOp: async (id, op) => void ops.push([id, op]),
+        }),
+      );
+      await runner.start({
+        workspaceId: 'ws',
+        repoIds: ws.repos.map((r) => r.id),
+        op: 'push',
+        options: setUpstream ? { setUpstream: true } : {},
+      }).done;
+      return ops;
+    };
+
+    const plain = await run(false);
+    expect(final()).toEqual({
+      ahead: 'done: Pushed 2 commits',
+      nothing: 'skipped: Nothing to push',
+      behind: 'skipped: Behind — pull first',
+      diverged: 'skipped: Diverged from upstream — pull first',
+      detached: 'skipped: Detached HEAD',
+      rebasing: 'skipped: A rebase is in progress',
+      newBranch: 'skipped: No upstream branch',
+      noRemote: 'skipped: No upstream branch',
+    });
+    expect(plain).toEqual([['id:ahead', { type: 'push', localRef: 'main', remote: '', remoteBranch: '' }]]);
+
+    const publish = await run(true);
+    expect(final()).toMatchObject({
+      ahead: 'done: Pushed 2 commits',
+      newBranch: 'done: Published to origin/feat/x',
+      noRemote: 'skipped: No remote',
+    });
+    expect(publish).toContainEqual([
+      'id:newBranch',
+      { type: 'push', localRef: 'feat/x', remote: 'origin', remoteBranch: 'feat/x', setUpstream: true },
+    ]);
+    // Never forced.
+    expect(publish.every(([, op]) => !(op as { force?: string }).force)).toBe(true);
+  });
+
+  it('push runs at most two repos at once', async () => {
+    ws = workspace(['a', 'b', 'c', 'd', 'e'].map((n) => repo(n)));
+    let inFlight = 0;
+    let max = 0;
+    const runner = new BulkRunner(
+      deps({
+        status: {
+          forPath: async () => okStatus({ ahead: 1 }),
+          invalidate: () => undefined,
+          locate: async () => null,
+          remotes: async () => [],
+        },
+        runOp: async () => {
+          inFlight++;
+          max = Math.max(max, inFlight);
+          await new Promise((r) => setTimeout(r, 20));
+          inFlight--;
+        },
+        concurrency: () => 8,
+      }),
+    );
+    await runner.start({ workspaceId: 'ws', repoIds: ws.repos.map((r) => r.id), op: 'push' }).done;
+    expect(max).toBe(2);
+    expect(Object.values(final()).every((v) => v === 'done: Pushed 1 commit')).toBe(true);
+  });
 });

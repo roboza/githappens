@@ -6,7 +6,10 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   DownloadCloud,
+  Eye,
+  EyeOff,
   FolderGit2,
   FolderOpen,
   FolderSearch,
@@ -21,14 +24,15 @@ import {
 } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 
-import type {
-  BulkOpProgress,
-  RepoStatusSummary,
-  Workspace,
-  WorkspacePatch,
-  WorkspaceRepo,
+import {
+  isRepoHidden,
+  type BulkOpProgress,
+  type RepoStatusSummary,
+  type Workspace,
+  type WorkspacePatch,
+  type WorkspaceRepo,
 } from '../../../../shared/ipc/workspaces-contract';
-import { prompt } from '../../components/Dialogs';
+import { confirm, prompt } from '../../components/Dialogs';
 import { useContextMenu, type MenuEntry } from '../../components/ContextMenu';
 import { useWorkspacePrCounts } from '../../launchpad/queries';
 import { invoke } from '../../lib/api';
@@ -36,6 +40,7 @@ import { formatDate, shortSha } from '../../lib/format';
 import { openInEditor } from '../../tools/actions';
 import { useSetting } from '../../stores/settings';
 import { useTabsStore } from '../../stores/tabs';
+import { useToastStore } from '../../stores/toasts';
 import { errorMessage, wsInvoke } from '../../workspaces/api';
 import {
   deleteWorkspace,
@@ -45,9 +50,12 @@ import {
   openWorkspaceRepos,
   openWorkspaceReposInEditor,
   removeRepos,
+  setReposHidden,
   startBulk,
   toastError,
 } from '../../workspaces/actions';
+import { planPush } from '../../workspaces/push-plan';
+import { nextSort, sortRepos, useRepoSort, wipTotal, type RepoSortKey } from '../../workspaces/repo-sort';
 import {
   useBranchMatrix,
   useBulkStore,
@@ -79,12 +87,60 @@ const KIND_LABEL: Record<Workspace['kind'], string> = {
 };
 
 const isoSecs = (iso?: string): number | null => (iso ? Math.floor(Date.parse(iso) / 1000) : null);
-const wipTotal = (st?: RepoStatusSummary): number =>
-  st ? st.wip.staged + st.wip.unstaged + st.wip.untracked + st.wip.conflicted : 0;
 
 function showMenu(e: MouseEvent, items: MenuEntry[]): void {
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
   useContextMenu.getState().show(r.left, r.bottom + 2, items);
+}
+
+/** Bulk push after confirming which branches go where (the one bulk action others can see). */
+async function pushRepos(
+  ws: Workspace,
+  repos: WorkspaceRepo[],
+  statuses: Map<string, RepoStatusSummary>,
+  setUpstream: boolean,
+): Promise<void> {
+  const { items, skipped } = planPush(repos, statuses, setUpstream);
+  if (!items.length) {
+    useToastStore.getState().push({
+      kind: 'info',
+      title: 'Nothing to push',
+      body: setUpstream
+        ? 'None of the selected repositories have commits to push.'
+        : 'None of the selected repositories have commits to push. Branches without an upstream need “Push and publish new branches”.',
+    });
+    return;
+  }
+  const ok = await confirm(
+    `Push ${items.length} ${items.length === 1 ? 'branch' : 'branches'}?`,
+    <div className={s.pushPlan}>
+      <ul>
+        {items.map((i) => (
+          <li key={i.repo.id}>
+            <span className={s.repoName}>{i.repo.name}</span>{' '}
+            <span className={s.mono}>
+              {i.branch} → {i.target}
+            </span>{' '}
+            <span className={s.muted}>{i.commits === null ? 'new branch' : `↑${i.commits}`}</span>
+          </li>
+        ))}
+      </ul>
+      {skipped > 0 && (
+        <p className={s.muted}>
+          {skipped} other selected {skipped === 1 ? 'repository' : 'repositories'} will be skipped (nothing to
+          push, behind their upstream, or no upstream branch).
+        </p>
+      )}
+    </div>,
+    'Push',
+  );
+  if (ok)
+    void startBulk(
+      ws,
+      'push',
+      repos.map((r) => r.id),
+      setUpstream ? { setUpstream: true } : {},
+    );
 }
 
 /** Workspace overview (spec 11 §4.1): header, summary chips, bulk toolbar and the tabs. */
@@ -106,6 +162,7 @@ function WorkspaceBody({
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('repos');
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [showHidden, setShowHidden] = useState(false);
   const status = useWorkspaceStatus(ws.id);
   const run = useBulkStore((st) => st.runs[ws.id]);
   // Open PRs per repo come from the Launchpad layer (spec 11 §4.1 `RepoStatusSummary.openPrs`).
@@ -129,7 +186,10 @@ function WorkspaceBody({
   }, [run?.finished, run?.bulkId, qc, ws.id]);
 
   const running = !!run && !run.finished;
-  const selected = ws.repos.filter((r) => checked.has(r.id));
+  const visible = ws.repos.filter((r) => !isRepoHidden(ws, r));
+  const hiddenCount = ws.repos.length - visible.length;
+  // Hidden repos are never part of a selection.
+  const selected = visible.filter((r) => checked.has(r.id));
   const ids = selected.map((r) => r.id);
   const preferSsh = useSetting('ssh.preferSshForProviders') === true;
   const missingSel = selected.filter((r) => {
@@ -138,7 +198,7 @@ function WorkspaceBody({
   });
 
   const chips = useMemo(() => {
-    const sums = ws.repos.map((r) => byId.get(r.id));
+    const sums = ws.repos.filter((r) => !isRepoHidden(ws, r)).map((r) => byId.get(r.id));
     return {
       missing: sums.filter((x) => x && !x.exists).length,
       changes: sums.filter((x) => wipTotal(x) > 0).length,
@@ -149,7 +209,7 @@ function WorkspaceBody({
         sums.reduce((n, x) => n + (x?.openPrs?.needsMyReview ?? 0), 0),
       ),
     };
-  }, [ws.repos, byId]);
+  }, [ws, byId]);
 
   const refresh = (): void => {
     void wsInvoke('workspace:status', { workspaceId: ws.id, force: true })
@@ -249,7 +309,7 @@ function WorkspaceBody({
       </header>
 
       <div className={s.chips} aria-label="Summary">
-        <span className={s.chip}>{ws.repos.length} repos</span>
+        <span className={s.chip}>{visible.length} repos</span>
         {chips.missing > 0 && <span className={`${s.chip} ${s.chipWarn}`}>{chips.missing} missing</span>}
         {chips.changes > 0 && <span className={s.chip}>{chips.changes} with changes</span>}
         {chips.behind > 0 && <span className={s.chip}>{chips.behind} behind</span>}
@@ -329,6 +389,22 @@ function WorkspaceBody({
         </button>
         <button
           type="button"
+          disabled={!ids.length || running}
+          title="Push the current branch of the selected repositories"
+          onClick={(e) =>
+            showMenu(e, [
+              { label: 'Push', onSelect: () => void pushRepos(ws, selected, byId, false) },
+              {
+                label: 'Push and publish new branches to origin',
+                onSelect: () => void pushRepos(ws, selected, byId, true),
+              },
+            ])
+          }
+        >
+          <ArrowUp size={14} /> Push <ChevronDown size={12} />
+        </button>
+        <button
+          type="button"
           disabled={!ids.length}
           onClick={(e) =>
             showMenu(e, [
@@ -349,13 +425,28 @@ function WorkspaceBody({
         </button>
         <button
           type="button"
-          disabled={!selected.length || ws.kind === 'directory'}
-          title={ws.kind === 'directory' ? 'Directory-synced workspaces follow their folder' : undefined}
-          onClick={() => void removeRepos(ws, selected).then((ok) => ok && setChecked(new Set()))}
+          disabled={!selected.length}
+          title="Hide the selected repositories from this list"
+          onClick={() => void setReposHidden(ws, selected, true).then((ok) => ok && setChecked(new Set()))}
         >
-          <Trash2 size={14} /> Remove
+          <EyeOff size={14} /> Hide
         </button>
+        {ws.kind !== 'directory' && (
+          <button
+            type="button"
+            disabled={!selected.length}
+            onClick={() => void removeRepos(ws, selected).then((ok) => ok && setChecked(new Set()))}
+          >
+            <Trash2 size={14} /> Remove
+          </button>
+        )}
         <span style={{ flex: 1 }} />
+        {hiddenCount > 0 && (
+          <label className={s.showHidden}>
+            <input type="checkbox" checked={showHidden} onChange={(e) => setShowHidden(e.target.checked)} />
+            Show hidden ({hiddenCount})
+          </label>
+        )}
         {running && (
           <button type="button" onClick={() => void wsInvoke('workspace:bulkCancel', { bulkId: run.bulkId })}>
             <X size={14} /> Cancel {run.op}
@@ -405,9 +496,17 @@ function WorkspaceBody({
                 </button>
               )}
             </div>
+          ) : !visible.length && !showHidden ? (
+            <div className={s.emptyState}>
+              <p className={s.muted}>All repositories in this workspace are hidden.</p>
+              <button type="button" onClick={() => setShowHidden(true)}>
+                <Eye size={14} /> Show hidden
+              </button>
+            </div>
           ) : (
             <RepoOverviewTable
               ws={ws}
+              repos={showHidden ? ws.repos : visible}
               statuses={byId}
               loading={status.isPending}
               rows={run?.rows ?? {}}
@@ -513,8 +612,27 @@ function RowState({ st, row }: { st?: RepoStatusSummary; row?: BulkOpProgress })
   return st.exists ? <Check size={14} className={s.good} aria-label="OK" /> : null;
 }
 
+/** Sortable column heading; clicking cycles first direction → other direction → workspace order. */
+function SortTh({ k, label, title }: { k: RepoSortKey; label: string; title?: string }) {
+  const sort = useRepoSort((st) => st.sort);
+  const active = sort?.key === k ? sort.dir : null;
+  return (
+    <th title={title} aria-sort={active === 'asc' ? 'ascending' : active === 'desc' ? 'descending' : 'none'}>
+      <button
+        type="button"
+        className={`${s.sortBtn} ${active ? s.sortActive : ''}`}
+        onClick={() => useRepoSort.getState().setSort(nextSort(sort, k))}
+      >
+        {label}
+        {active === 'asc' ? <ChevronUp size={12} /> : active === 'desc' ? <ChevronDown size={12} /> : null}
+      </button>
+    </th>
+  );
+}
+
 function RepoOverviewTable({
   ws,
+  repos,
   statuses,
   loading,
   rows,
@@ -522,6 +640,8 @@ function RepoOverviewTable({
   setChecked,
 }: {
   ws: Workspace;
+  /** Rows to show (hidden repos only when "Show hidden" is on). */
+  repos: WorkspaceRepo[];
   statuses: Map<string, RepoStatusSummary>;
   loading: boolean;
   rows: Record<string, BulkOpProgress>;
@@ -529,7 +649,10 @@ function RepoOverviewTable({
   setChecked(fn: (c: Set<string>) => Set<string>): void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const allChecked = ws.repos.length > 0 && ws.repos.every((r) => checked.has(r.id));
+  const sort = useRepoSort((st) => st.sort);
+  const rowsInOrder = useMemo(() => sortRepos(repos, statuses, sort), [repos, statuses, sort]);
+  const selectable = repos.filter((r) => !isRepoHidden(ws, r));
+  const allChecked = selectable.length > 0 && selectable.every((r) => checked.has(r.id));
   const toggle = (id: string, on: boolean): void =>
     setChecked((c) => {
       const next = new Set(c);
@@ -544,6 +667,13 @@ function RepoOverviewTable({
 
   const rowMenu = (e: MouseEvent, r: WorkspaceRepo, st?: RepoStatusSummary): void => {
     e.preventDefault();
+    if (isRepoHidden(ws, r)) {
+      useContextMenu.getState().show(e.clientX, e.clientY, [
+        { label: 'Unhide', onSelect: () => void setReposHidden(ws, [r], false) },
+        { label: 'Locate…', onSelect: () => void locateRepo(ws, r) },
+      ]);
+      return;
+    }
     useContextMenu.getState().show(e.clientX, e.clientY, [
       { label: 'Open', disabled: !st?.exists, onSelect: () => open(r) },
       {
@@ -553,6 +683,12 @@ function RepoOverviewTable({
       },
       { label: 'Fetch', disabled: !st?.exists, onSelect: () => void startBulk(ws, 'fetch', [r.id]) },
       { label: 'Pull', disabled: !st?.exists, onSelect: () => void startBulk(ws, 'pull', [r.id]) },
+      {
+        label: 'Push',
+        disabled: !st?.exists,
+        // A single repo without an upstream is published (the confirmation says so).
+        onSelect: () => void pushRepos(ws, [r], statuses, !st?.upstream),
+      },
       { label: 'Clone…', disabled: !!st?.exists, onSelect: () => void startBulk(ws, 'clone', [r.id]) },
       { label: 'Locate…', onSelect: () => void locateRepo(ws, r) },
       {
@@ -570,11 +706,13 @@ function RepoOverviewTable({
         : []),
       'separator',
       {
-        label: 'Remove from workspace',
-        danger: true,
-        disabled: ws.kind === 'directory',
-        onSelect: () => void removeRepos(ws, [r]),
+        label: 'Hide from this list',
+        onSelect: () =>
+          void setReposHidden(ws, [r], true).then((ok) => ok && checked.has(r.id) && toggle(r.id, false)),
       },
+      ...(ws.kind !== 'directory'
+        ? [{ label: 'Remove from workspace', danger: true, onSelect: () => void removeRepos(ws, [r]) }]
+        : []),
     ]);
   };
 
@@ -589,22 +727,23 @@ function RepoOverviewTable({
                 aria-label="Select all repositories"
                 checked={allChecked}
                 onChange={(e) =>
-                  setChecked(() => (e.target.checked ? new Set(ws.repos.map((r) => r.id)) : new Set()))
+                  setChecked(() => (e.target.checked ? new Set(selectable.map((r) => r.id)) : new Set()))
                 }
               />
             </th>
-            <th>Repository</th>
-            <th>Branch</th>
-            <th title="Ahead / behind upstream">↑↓</th>
-            <th title="Files changed">WIP</th>
-            <th title="Stashes">Stash</th>
-            <th title="Open pull requests: mine / total">PRs</th>
-            <th>Fetched</th>
-            <th>Status</th>
+            <SortTh k="name" label="Repository" />
+            <SortTh k="branch" label="Branch" />
+            <SortTh k="sync" label="↑↓" title="Ahead / behind upstream (sorts by behind, then ahead)" />
+            <SortTh k="wip" label="WIP" title="Files changed" />
+            <SortTh k="stash" label="Stash" title="Stashes" />
+            <SortTh k="prs" label="PRs" title="Open pull requests: mine / total" />
+            <SortTh k="fetched" label="Fetched" />
+            <SortTh k="status" label="Status" title="Sorts the repos that need attention first" />
           </tr>
         </thead>
         <tbody>
-          {ws.repos.map((r) => {
+          {rowsInOrder.map((r) => {
+            const hidden = isRepoHidden(ws, r);
             const st = statuses.get(r.id);
             const row = rows[r.id];
             const missing = st && !st.exists;
@@ -614,7 +753,7 @@ function RepoOverviewTable({
             return (
               <Fragment key={r.id}>
                 <tr
-                  className={`${s.row} ${checked.has(r.id) ? s.rowChecked : ''}`}
+                  className={`${s.row} ${checked.has(r.id) ? s.rowChecked : ''} ${hidden ? s.rowHidden : ''}`}
                   onClick={() => setExpanded(isOpen ? null : r.id)}
                   onDoubleClick={() => open(r)}
                   onContextMenu={(e) => rowMenu(e, r, st)}
@@ -623,7 +762,9 @@ function RepoOverviewTable({
                     <input
                       type="checkbox"
                       aria-label={`Select ${r.name}`}
-                      checked={checked.has(r.id)}
+                      disabled={hidden}
+                      title={hidden ? 'Unhide this repository to select it' : undefined}
+                      checked={!hidden && checked.has(r.id)}
                       onChange={(e) => toggle(r.id, e.target.checked)}
                     />
                   </td>
@@ -724,7 +865,21 @@ function RepoOverviewTable({
                   </td>
                   <td className={s.muted}>{fetched ? formatDate(fetched) : st?.isRepo ? 'never' : ''}</td>
                   <td>
-                    {loading && !st ? (
+                    {hidden ? (
+                      <span className={`${s.state} ${s.muted}`}>
+                        <EyeOff size={14} /> <span className={s.stateText}>Hidden</span>
+                        <button
+                          type="button"
+                          className={s.inlineBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void setReposHidden(ws, [r], false);
+                          }}
+                        >
+                          Unhide
+                        </button>
+                      </span>
+                    ) : loading && !st ? (
                       <Loader2 size={14} className={s.spin} />
                     ) : (
                       <RowState st={st} row={row} />

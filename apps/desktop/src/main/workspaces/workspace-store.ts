@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
-import type {
-  CreateWorkspaceInput,
-  NewWorkspaceRepo,
-  Workspace,
-  WorkspaceFile,
-  WorkspacePatch,
-  WorkspaceRepo,
+import {
+  hiddenRepoKey,
+  type CreateWorkspaceInput,
+  type NewWorkspaceRepo,
+  type Workspace,
+  type WorkspaceFile,
+  type WorkspacePatch,
+  type WorkspaceRepo,
 } from '../../shared/ipc/workspaces-contract';
 import { backupCorrupt, readJson, writeFileAtomic } from '../settings/atomic-file';
 import { canonicalPath } from '../services/canonical-path';
@@ -78,6 +79,10 @@ export function sanitizeWorkspace(w: unknown, order: number): Workspace | null {
   if (str(o.color)) ws.color = str(o.color);
   if (str(o.icon)) ws.icon = str(o.icon);
   if (str(o.defaultCloneRoot)) ws.defaultCloneRoot = str(o.defaultCloneRoot);
+  if (Array.isArray(o.hiddenRepos)) {
+    const hidden = [...new Set(o.hiddenRepos.filter((k): k is string => typeof k === 'string' && !!k))];
+    if (hidden.length) ws.hiddenRepos = hidden;
+  }
   if (d && str(d.root)) {
     ws.directory = {
       root: str(d.root)!,
@@ -88,6 +93,11 @@ export function sanitizeWorkspace(w: unknown, order: number): Workspace | null {
   }
   if (o.cloud && typeof o.cloud === 'object') ws.cloud = o.cloud as Workspace['cloud'];
   return ws;
+}
+
+function setHidden(ws: Workspace, keys: string[]): void {
+  if (keys.length) ws.hiddenRepos = [...new Set(keys)];
+  else delete ws.hiddenRepos;
 }
 
 export const clampDepth = (v: unknown): number =>
@@ -205,7 +215,27 @@ export class WorkspaceStore {
   removeRepos(id: string, repoIds: string[]): Workspace {
     const ws = this.get(id);
     const drop = new Set(repoIds);
+    const dropKeys = new Set(ws.repos.filter((r) => drop.has(r.id)).map(hiddenRepoKey));
     ws.repos = ws.repos.filter((r) => !drop.has(r.id));
+    setHidden(
+      ws,
+      (ws.hiddenRepos ?? []).filter((k) => !dropKeys.has(k)),
+    );
+    ws.updatedAt = nowIso();
+    this.save();
+    return ws;
+  }
+
+  /**
+   * Hide repos from the overview, or show them again. Directory-synced workspaces keep the keys of
+   * repos that vanish from their folder, so a repo that comes back stays hidden.
+   */
+  setReposHidden(id: string, repoIds: string[], hidden: boolean): Workspace {
+    const ws = this.get(id);
+    const wanted = new Set(repoIds);
+    const keys = ws.repos.filter((r) => wanted.has(r.id)).map(hiddenRepoKey);
+    const current = ws.hiddenRepos ?? [];
+    setHidden(ws, hidden ? [...new Set([...current, ...keys])] : current.filter((k) => !keys.includes(k)));
     ws.updatedAt = nowIso();
     this.save();
     return ws;
@@ -216,8 +246,13 @@ export class WorkspaceStore {
     const ws = this.get(id);
     const repo = ws.repos.find((r) => r.id === repoId);
     if (!repo) throw new Error('Repository not found in this workspace.');
+    const oldKey = hiddenRepoKey(repo);
     if (localPath) repo.localPath = canonicalPath(localPath);
     else delete repo.localPath;
+    // A hidden repo stays hidden under its new path.
+    if (ws.hiddenRepos?.includes(oldKey)) {
+      setHidden(ws, [...ws.hiddenRepos.filter((k) => k !== oldKey), hiddenRepoKey(repo)]);
+    }
     if (remoteUrl && !repo.remoteUrl) repo.remoteUrl = remoteUrl;
     ws.updatedAt = nowIso();
     this.save();
@@ -249,16 +284,23 @@ export class WorkspaceStore {
     let order = items.reduce((m, w) => Math.max(m, w.order + 1), 0);
     const now = nowIso();
     const created = list.map((w) => {
+      const newIds = new Map(w.repos.map((r) => [r.id, randomUUID()]));
       const ws: Workspace = {
         ...w,
         id: randomUUID(),
         order: order++,
         hidden: false,
-        repos: w.repos.map((r) => ({ ...r, id: randomUUID() })),
+        repos: w.repos.map((r) => ({ ...r, id: newIds.get(r.id)! })),
         createdAt: now,
         updatedAt: now,
       };
       delete ws.cloud;
+      // Repos hidden by id follow their new ids.
+      if (w.hiddenRepos)
+        setHidden(
+          ws,
+          w.hiddenRepos.map((k) => newIds.get(k) ?? k),
+        );
       return ws;
     });
     items.push(...created);

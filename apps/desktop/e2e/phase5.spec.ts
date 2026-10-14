@@ -216,6 +216,38 @@ test('workspaces: scan a folder into a local workspace, see status, bulk fetch',
   await expect(alphaRow.getByRole('cell').nth(7)).not.toHaveText('never', { timeout: 15_000 });
   await page.screenshot({ path: path.join(shots, 'phase5-workspace.png') });
 
+  // Sorting: WIP starts biggest first; Repository cycles asc → desc → workspace order
+  const firstRow = page.getByRole('checkbox', { name: /^Select (alpha|beta)$/ }).first();
+  const heading = (name: string) => page.getByRole('columnheader').getByRole('button', { name, exact: true });
+  await heading('WIP').click();
+  await expect(firstRow).toHaveAccessibleName('Select beta');
+  await heading('Repository').click();
+  await expect(firstRow).toHaveAccessibleName('Select alpha');
+  await heading('Repository').click();
+  await expect(firstRow).toHaveAccessibleName('Select beta');
+  await heading('Repository').click();
+  await expect(page.getByRole('columnheader', { name: 'Repository' })).toHaveAttribute('aria-sort', 'none');
+
+  // Push: alpha is behind its upstream after the fetch, so there is nothing to push
+  const bulk = page.getByRole('toolbar', { name: 'Bulk actions' });
+  await bulk.getByRole('button', { name: 'Push' }).click();
+  await page.getByRole('menuitem', { name: 'Push', exact: true }).click();
+  await expect(toast('Nothing to push')).toBeVisible();
+  await alphaRow.getByRole('checkbox', { name: 'Select alpha' }).uncheck();
+
+  // Hide beta, show hidden rows, unhide it again
+  await betaRow.getByRole('checkbox', { name: 'Select beta' }).check();
+  await bulk.getByRole('button', { name: 'Hide' }).click();
+  await expect(betaRow).toHaveCount(0);
+  await expect(page.getByText('1 with changes')).toBeHidden();
+  const showHidden = page.getByRole('checkbox', { name: 'Show hidden (1)' });
+  await showHidden.check();
+  await expect(betaRow.getByRole('checkbox', { name: 'Select beta' })).toBeDisabled();
+  await betaRow.getByRole('button', { name: 'Unhide' }).click();
+  await expect(showHidden).toHaveCount(0);
+  await expect(betaRow.getByRole('checkbox', { name: 'Select beta' })).toBeEnabled();
+  await expect(page.getByText('1 with changes')).toBeVisible({ timeout: 15_000 });
+
   // Branches tab: "main" is shared by both repos
   await page.getByRole('tab', { name: 'Branches' }).click();
   await expect(page.getByRole('cell', { name: 'main', exact: true })).toBeVisible();

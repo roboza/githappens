@@ -134,7 +134,12 @@ export async function startBulk(
   ws: Workspace,
   op: BulkOp,
   repoIds: string[],
-  options: { pullMode?: PullStrategy; protocol?: 'https' | 'ssh'; autostash?: boolean } = {},
+  options: {
+    pullMode?: PullStrategy;
+    protocol?: 'https' | 'ssh';
+    autostash?: boolean;
+    setUpstream?: boolean;
+  } = {},
 ): Promise<void> {
   if (!repoIds.length) return;
   try {
@@ -168,6 +173,26 @@ export async function removeRepos(ws: Workspace, repos: WorkspaceRepo[]): Promis
     return true;
   } catch (e) {
     toastError('Could not remove repositories', e);
+    return false;
+  }
+}
+
+/** Hide repos from the overview (or show them again); files and the workspace's repo list are kept. */
+export async function setReposHidden(
+  ws: Workspace,
+  repos: WorkspaceRepo[],
+  hidden: boolean,
+): Promise<boolean> {
+  if (!repos.length) return false;
+  try {
+    await wsInvoke('workspace:setReposHidden', {
+      workspaceId: ws.id,
+      repoIds: repos.map((r) => r.id),
+      hidden,
+    });
+    return true;
+  } catch (e) {
+    toastError(hidden ? 'Could not hide repositories' : 'Could not show repositories', e);
     return false;
   }
 }
