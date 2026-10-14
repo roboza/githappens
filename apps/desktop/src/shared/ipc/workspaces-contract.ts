@@ -58,6 +58,11 @@ export interface Workspace {
   };
   /** Where missing repos are cloned. */
   defaultCloneRoot?: string;
+  /**
+   * Repos hidden from the overview, by local path (stable across directory re-scans) or, for repos
+   * without one, by repo id. See `isRepoHidden`.
+   */
+  hiddenRepos?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -90,7 +95,13 @@ export interface RepoStatusSummary {
   error?: string;
 }
 
-export type BulkOp = 'fetch' | 'pull' | 'clone';
+/** The key a repo is hidden under (`Workspace.hiddenRepos`). */
+export const hiddenRepoKey = (r: Pick<WorkspaceRepo, 'id' | 'localPath'>): string => r.localPath ?? r.id;
+
+export const isRepoHidden = (ws: Pick<Workspace, 'hiddenRepos'>, r: WorkspaceRepo): boolean =>
+  !!ws.hiddenRepos?.includes(hiddenRepoKey(r));
+
+export type BulkOp = 'fetch' | 'pull' | 'push' | 'clone';
 
 export interface BulkOpRequest {
   workspaceId: string;
@@ -100,6 +111,8 @@ export interface BulkOpRequest {
     pullMode?: PullStrategy;
     /** Rebase/merge pulls only: stash local changes around the pull. */
     autostash?: boolean;
+    /** Push only: publish branches without an upstream to `origin` and track them. */
+    setUpstream?: boolean;
     cloneRoot?: string;
     protocol?: 'https' | 'ssh';
     /** 1–16; defaults to the `workspaces.bulkConcurrency` setting. */
@@ -181,6 +194,11 @@ export interface WorkspacesIpcContract {
   /** Duplicate paths / provider repos are ignored. Local paths are validated as git repos. */
   'workspace:addRepos': { req: { workspaceId: string; repos: NewWorkspaceRepo[] }; res: Workspace };
   'workspace:removeRepos': { req: { workspaceId: string; repoIds: string[] }; res: Workspace };
+  /** Hide repos from (or show them again in) the overview; hidden repos skip status and "Open all". */
+  'workspace:setReposHidden': {
+    req: { workspaceId: string; repoIds: string[]; hidden: boolean };
+    res: Workspace;
+  };
   'workspace:scanDirectory': {
     req: { root: string; depth?: number; ignore?: string[]; includeNested?: boolean };
     res: { repos: ScannedRepo[]; truncated: boolean };
@@ -230,6 +248,7 @@ export const WORKSPACES_INVOKE_CHANNELS = [
   'workspace:reorder',
   'workspace:addRepos',
   'workspace:removeRepos',
+  'workspace:setReposHidden',
   'workspace:scanDirectory',
   'workspace:importCodeWorkspace',
   'workspace:exportJson',

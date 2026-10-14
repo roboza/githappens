@@ -4,19 +4,20 @@ import path from 'node:path';
 import type { GitOperation, GitProcessRunner, RepoId } from '@githappens/git';
 
 import type { ToastSpec } from '../../shared/ipc/app-contract';
-import type {
-  BranchMatrix,
-  BranchTrack,
-  BulkOpRequest,
-  CreateWorkspaceInput,
-  NewWorkspaceRepo,
-  RepoStatusSummary,
-  Workspace,
-  WorkspaceFile,
-  WorkspacePatch,
-  WorkspaceRepo,
-  WorkspaceRepoDetails,
-  WorkspacesEventContract,
+import {
+  isRepoHidden,
+  type BranchMatrix,
+  type BranchTrack,
+  type BulkOpRequest,
+  type CreateWorkspaceInput,
+  type NewWorkspaceRepo,
+  type RepoStatusSummary,
+  type Workspace,
+  type WorkspaceFile,
+  type WorkspacePatch,
+  type WorkspaceRepo,
+  type WorkspaceRepoDetails,
+  type WorkspacesEventContract,
 } from '../../shared/ipc/workspaces-contract';
 import { BulkRunner, type CloneJob } from './bulk-runner';
 import {
@@ -181,6 +182,10 @@ export class WorkspaceService {
     return this.store.addRepos(id, await this.resolveNewRepos(repos));
   }
 
+  setReposHidden(id: string, repoIds: string[], hidden: boolean): Workspace {
+    return this.store.setReposHidden(id, repoIds, hidden);
+  }
+
   scan(o: { root: string; depth?: number; ignore?: string[]; includeNested?: boolean }) {
     if (!o.root || !isDirectory(o.root)) throw new Error('Folder not found.');
     return scanDirectory(
@@ -267,7 +272,11 @@ export class WorkspaceService {
       await this.sync.sync(ws.id, force);
       ws = this.store.get(workspaceId);
     }
-    const summaries = await this.status.forRepos(ws.repos, force);
+    // Hidden repos cost nothing: the overview shows them without status.
+    const summaries = await this.status.forRepos(
+      ws.repos.filter((r) => !isRepoHidden(ws, r)),
+      force,
+    );
     this.d.emit('workspace:statusUpdated', { workspaceId, summaries });
     return summaries;
   }
@@ -313,7 +322,7 @@ export class WorkspaceService {
     const paths: string[] = [];
     const missing: string[] = [];
     for (const r of ws.repos) {
-      if (wanted && !wanted.has(r.id)) continue;
+      if (wanted ? !wanted.has(r.id) : isRepoHidden(ws, r)) continue;
       if (r.localPath && isDirectory(r.localPath)) paths.push(r.localPath);
       else missing.push(r.name);
     }
@@ -322,7 +331,7 @@ export class WorkspaceService {
 
   async branches(workspaceId: string): Promise<BranchMatrix> {
     const ws = this.store.get(workspaceId);
-    const local = ws.repos.filter((r) => r.localPath && isDirectory(r.localPath));
+    const local = ws.repos.filter((r) => r.localPath && !isRepoHidden(ws, r) && isDirectory(r.localPath));
     const per = await mapLimit(local, 6, (r) => this.status.branches(r.localPath!).catch(() => []));
     const byName = new Map<string, Record<string, BranchTrack | null>>();
     per.forEach((branches, i) => {

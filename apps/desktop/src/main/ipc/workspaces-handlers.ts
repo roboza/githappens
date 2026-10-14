@@ -74,7 +74,7 @@ function directory(v: WorkspaceDirectorySync | undefined): WorkspaceDirectorySyn
 }
 
 function bulkRequest(req: BulkOpRequest): BulkOpRequest {
-  if (!['fetch', 'pull', 'clone'].includes(req.op)) throw new Error('Invalid bulk operation');
+  if (!['fetch', 'pull', 'push', 'clone'].includes(req.op)) throw new Error('Invalid bulk operation');
   const o = req.options ?? {};
   if (o.pullMode !== undefined && !['ff-if-possible', 'ff-only', 'rebase'].includes(o.pullMode)) {
     throw new Error('Invalid pull mode');
@@ -89,6 +89,7 @@ function bulkRequest(req: BulkOpRequest): BulkOpRequest {
     options: {
       ...(o.pullMode ? { pullMode: o.pullMode } : {}),
       ...(o.autostash ? { autostash: true } : {}),
+      ...(o.setUpstream ? { setUpstream: true } : {}),
       ...(o.cloneRoot ? { cloneRoot: absPath(o.cloneRoot, 'clone folder') } : {}),
       ...(o.protocol ? { protocol: o.protocol } : {}),
       ...(o.concurrency !== undefined ? { concurrency: Number(o.concurrency) } : {}),
@@ -129,6 +130,8 @@ export function createWorkspacesHandlers(svc: WorkspaceService): WorkspacesHandl
       svc.addRepos(str(workspaceId, 'workspace id'), newRepos(repos)),
     'workspace:removeRepos': ({ workspaceId, repoIds }) =>
       svc.store.removeRepos(str(workspaceId, 'workspace id'), strArray(repoIds, 'repo ids')),
+    'workspace:setReposHidden': ({ workspaceId, repoIds, hidden }) =>
+      svc.setReposHidden(str(workspaceId, 'workspace id'), strArray(repoIds, 'repo ids'), !!hidden),
     'workspace:scanDirectory': ({ root, depth, ignore, includeNested }) =>
       svc.scan({
         root: absPath(root, 'folder'),

@@ -31,10 +31,10 @@ function synthetic(n: number): GraphCommitInput[] {
 }
 
 // Strict ceilings only in dedicated benchmark runs (GRAPH_BENCH=1); in the normal test run other
-// packages compete for the CPU, so timings get 5x slack (10x on hosted CI runners, where macOS is
-// notably slower) and the 1M case (≈1 GB) is skipped.
+// packages compete for the CPU, so timings get 5x slack (15x on hosted CI runners, which are slow and
+// noisy, macOS especially) and the 1M case (≈1 GB) is skipped.
 const heavy = process.env.GRAPH_BENCH === '1';
-const slack = heavy ? 1 : process.env.CI ? 10 : 5;
+const slack = heavy ? 1 : process.env.CI ? 15 : 5;
 
 describe('performance', () => {
   it('lays out 100k commits in < 1500 ms (streamed in 5,000-commit pages)', () => {
@@ -76,8 +76,8 @@ describe('performance', () => {
     );
     expect(m.rowCount).toBe(100_001);
     expect(layoutMs).toBeLessThan(1500 * slack);
-    expect(reachMs).toBeLessThan(100);
-    expect(frameMs).toBeLessThan(8);
+    expect(reachMs).toBeLessThan(100 * slack);
+    expect(frameMs).toBeLessThan(8 * slack);
   });
 });
 

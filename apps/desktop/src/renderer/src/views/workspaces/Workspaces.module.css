@@ -459,6 +459,52 @@
   background: var(--kl-selected-row);
 }
 
+.rowHidden {
+  opacity: 0.6;
+}
+
+/* Column heading that sorts the table (looks like the plain heading text). */
+.sortBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sortBtn:hover,
+.sortActive {
+  color: var(--kl-text-normal);
+}
+
+.showHidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--kl-text-secondary);
+  cursor: pointer;
+}
+
+.pushPlan ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.pushPlan li {
+  margin: 2px 0;
+}
+
+.pushPlan p {
+  margin: 0;
+}
+
 .nameCell {
   display: flex;
   align-items: center;
