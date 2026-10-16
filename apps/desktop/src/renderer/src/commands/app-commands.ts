@@ -49,6 +49,7 @@ import {
   repoRoot,
   showInFolder,
 } from '../tools/actions';
+import { openBranchCleanup } from '../views/remotes/dialog-store';
 import { createNewFile } from '../views/file/actions';
 import { popLatestStash, quickStash, stashWithOptions } from '../views/ops/branching-actions';
 import { openUndoHistory } from '../views/undo/useUndoPeek';
@@ -385,6 +386,13 @@ export function installAppCommands(
       keybinding: mod('B'),
       when: needRepo,
       run: withRepo((r) => createBranch(r)),
+    },
+    {
+      id: 'branch.cleanup',
+      title: 'Clean Up Branches',
+      category: 'Branch',
+      when: needRepo,
+      run: withRepo((r) => openBranchCleanup(r)),
     },
     {
       id: 'branch.rename',

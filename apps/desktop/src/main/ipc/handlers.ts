@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import {
   blameFile,
+  branchCleanupScan,
   configGet,
   configList,
   configSetGlobal,
@@ -302,6 +303,7 @@ export function createHandlers(d: HandlerDeps): CoreHandlers {
     'graph:search': async ({ repoId, query }) => ({ shas: await repos.get(repoId).search(query) }),
     'git:checkout:preflight': ({ repoId, target }) => checkoutPreflight(repos.get(repoId), target),
     'git:branch:validateName': ({ repoId, name }) => validateBranchName(repos.get(repoId), name),
+    'git:branch:cleanupScan': ({ repoId }) => branchCleanupScan(repos.get(repoId)),
     'git:commit:headMessage': ({ repoId }) => headMessage(repos.get(repoId)),
     'git:undo:peek': ({ repoId }) => repos.journal(repoId).peek(),
     'git:conflict:state': ({ repoId }) => conflictState(repos.get(repoId)),

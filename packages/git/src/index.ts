@@ -28,6 +28,7 @@ export * from './service/git-service';
 export * from './service/file-views';
 export * from './service/config';
 export * from './service/huge-repo';
+export * from './service/branch-cleanup';
 export * from './ops/locks';
 export * from './ops/types';
 export * from './ops/queue';

@@ -17,6 +17,7 @@ import type {
   StashEntry,
   StatusResult,
   BlameResult,
+  BranchCleanupScan,
   ConfigEntry,
   ConfigScope,
   ConflictFile,
@@ -85,6 +86,8 @@ export interface GitIpcContract {
     req: { repoId: RepoId; name: string };
     res: { valid: boolean; reason?: string };
   };
+  /** "Clean up branches" candidates (spec 05 §6.13); read-only. */
+  'git:branch:cleanupScan': { req: { repoId: RepoId }; res: BranchCleanupScan };
   'git:commit:headMessage': { req: { repoId: RepoId }; res: { summary: string; description: string } };
   'git:undo:peek': { req: { repoId: RepoId }; res: UndoPeek };
   // ---- Phase 3 reads (specs 05, 07, 08, 09) ----

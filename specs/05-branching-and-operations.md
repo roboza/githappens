@@ -454,6 +454,29 @@ git config gitflow.prefix.feature feature/ ; .release release/ ; .hotfix hotfix/
 ```
 Each finish is a **composite op** with one journal entry (snapshot of main, develop, branch refs) so a single undo restores all three refs.
 
+### 6.13 Clean up branches *(our extension)*
+Local branches pile up after PRs merge or close: `fetch --prune` drops the remote-tracking ref but never the local branch, and `git branch --merged` misses squash and rebase merges (the GitHub default). Entry points: **Branch ▾ → Clean up branches…** (toolbar split button) and the palette command `branch.cleanup`.
+
+Flow: open the dialog → `fetch --all --prune` (if the repo has remotes; on failure, show an inline note and scan the last fetched state) → `git:branch:cleanupScan` → review → one `branch.delete`. The dialog is the confirmation: no second prompt. A success toast offers **Undo**.
+
+Base branch: `refs/remotes/<r>/HEAD` (origin first), then `<r>/main`, `<r>/master`, local `main`, `master`. No base → nothing offered.
+
+Protected (never listed, named in the footer): current branch, branches checked out in any worktree, `main`/`master`/`develop`/`trunk`, the base's local twin.
+
+Classification of every other local branch:
+| Reason | Detection | Group | Preselected |
+|---|---|---|---|
+| `merged` | `for-each-ref --merged=<base>`. Skipped when its tip equals the base tip and the upstream is not gone (most likely a branch just created) | Merged | yes |
+| `rebase-merged` | every non-merge commit's `patch-id --stable` appears in the last 1000 base commits | Merged | yes |
+| `squash-merged` | `patch-id --stable` of `git diff <merge-base> <tip>` appears in the last 1000 base commits | Merged | yes |
+| `upstream-gone` | configured upstream ref missing, none of the above | Remote deleted, not merged | **no**. The row shows "N commits not merged", and selecting any shows an inline warning and turns the button red |
+
+Rows show the name, reason badge, commits not merged, last commit date and author. Group checkboxes toggle the whole group (indeterminate when mixed). The button names the count ("Delete 4 branches").
+
+Delete: `branch.delete` with `force: true` (squash-merged and remote-deleted branches fail `-d`) and `expectedSha` per branch. The executor re-reads each tip and skips any that moved since the scan, with a warning ("Skipped x: it changed since the scan."). Local only: remote branches are not touched. Undo restores every deleted ref and its tracking config via the journal (§6.11).
+
+Later phases: provider PR status per row ("#142 merged" / "#98 closed", via `HostingProvider.listPullRequests`), a **Stale** group (no commits in 90 days, configurable, never preselected), per-row remote deletion (off by default, leased), user protect patterns (`release/*`), a background-scan badge on Branch, and workspace bulk cleanup (plan → confirm → `BulkRunner`, as for bulk push).
+
 ## 7. Step-by-step implementation plan
 
 1. **Ref-name validation** service (`check-ref-format`) + `branch:validateName` IPC; unit tests with tricky names (`a..b`, `@{`, trailing `.lock`, unicode).

@@ -5,7 +5,7 @@ import type { WorktreeForm } from '../worktrees/worktree-model';
 
 /**
  * Left-panel dialogs (Phase 8): Add/Edit Remote, Set Upstream, Create Worktree, Add Submodule,
- * Edit Submodule URL, LFS Locks. One open at a time; `<LeftDialogsHost/>` renders it.
+ * Edit Submodule URL, LFS Locks, Clean up branches. One open at a time; `<LeftDialogsHost/>` renders it.
  */
 export type LeftDialog =
   | { kind: 'remote'; repoId: RepoId; edit?: RemoteInfo }
@@ -13,7 +13,8 @@ export type LeftDialog =
   | { kind: 'worktree'; repoId: RepoId; initial?: Partial<WorktreeForm> }
   | { kind: 'submodule'; repoId: RepoId }
   | { kind: 'submoduleUrl'; repoId: RepoId; path: string; url: string }
-  | { kind: 'lfsLocks'; repoId: RepoId };
+  | { kind: 'lfsLocks'; repoId: RepoId }
+  | { kind: 'branchCleanup'; repoId: RepoId };
 
 interface Store {
   current: LeftDialog | null;
@@ -45,3 +46,4 @@ export const openAddSubmodule = (repoId: RepoId): void => openLeftDialog({ kind:
 export const openEditSubmoduleUrl = (repoId: RepoId, path: string, url: string): void =>
   openLeftDialog({ kind: 'submoduleUrl', repoId, path, url });
 export const openLfsLocks = (repoId: RepoId): void => openLeftDialog({ kind: 'lfsLocks', repoId });
+export const openBranchCleanup = (repoId: RepoId): void => openLeftDialog({ kind: 'branchCleanup', repoId });

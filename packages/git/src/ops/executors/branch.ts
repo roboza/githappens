@@ -46,11 +46,30 @@ async function renameBranch(ctx: OpContext, from: string, to: string): Result {
 
 async function deleteBranches(
   ctx: OpContext,
-  branches: { name: string; deleteRemote?: { remote: string; remoteBranch: string } }[],
+  requested: {
+    name: string;
+    deleteRemote?: { remote: string; remoteBranch: string };
+    expectedSha?: string;
+  }[],
   force: boolean,
 ): Result {
-  if (!branches.length) return {};
-  for (const b of branches) assertSafeName(b.name, 'branch name');
+  for (const b of requested) assertSafeName(b.name, 'branch name');
+  // compare-then-delete: a branch that moved since the caller looked at it is kept
+  const warnings: string[] = [];
+  const branches: typeof requested = [];
+  for (const b of requested) {
+    if (b.expectedSha) {
+      const r = await read(ctx.service, ['rev-parse', '-q', '--verify', `refs/heads/${b.name}`], {
+        expectedExitCodes: [0, 1],
+      });
+      if (r.stdout.trim() !== b.expectedSha) {
+        warnings.push(`Skipped ${b.name}: it changed since the scan.`);
+        continue;
+      }
+    }
+    branches.push(b);
+  }
+  if (!branches.length) return warnings.length ? { warnings } : {};
   // chunks keep Windows command lines short (spec 05 §8)
   const names = branches.map((b) => b.name);
   for (let i = 0; i < names.length; i += 200) {
@@ -69,7 +88,10 @@ async function deleteBranches(
     const r = await git(ctx, args, { network: 'push', expectedExitCodes: [0, 1] });
     pushOrThrow(args, r, parsePorcelainPush(r.stdout), ctx.opId);
   }
-  return { summary: `Deleted ${plural(names.length, 'branch', 'branches')}` };
+  return {
+    summary: `Deleted ${plural(names.length, 'branch', 'branches')}`,
+    ...(warnings.length ? { warnings } : {}),
+  };
 }
 
 async function setUpstream(ctx: OpContext, local: string, upstream: string | null): Result {

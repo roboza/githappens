@@ -4,13 +4,14 @@ import { useEffect } from 'react';
 import { LfsLocksDialog } from '../lfs/LfsLocksDialog';
 import { AddSubmoduleDialog, SubmoduleUrlDialog } from '../submodules/SubmoduleDialogs';
 import { WorktreeDialog } from '../worktrees/WorktreeDialog';
+import { BranchCleanupDialog } from './BranchCleanupDialog';
 import { useLeftDialogs } from './dialog-store';
 import { RemoteDialog } from './RemoteDialog';
 import { UpstreamDialog } from './UpstreamDialog';
 
 /**
  * Renders the open left-panel dialog (Add/Edit Remote, Set Upstream, Create Worktree, Add Submodule,
- * Edit Submodule URL, LFS Locks).
+ * Edit Submodule URL, LFS Locks, Clean up branches).
  *
  * Mount once app-wide as `<LeftDialogsHost />` (recommended, App.tsx). Each LeftPanel also mounts a
  * scoped `<LeftDialogsHost repoId={…} />` that only renders while no app-wide host exists and the dialog
@@ -58,5 +59,7 @@ export function LeftDialogsHost({ repoId }: { repoId?: RepoId }) {
       );
     case 'lfsLocks':
       return <LfsLocksDialog key={key} repoId={current.repoId} onClose={close} />;
+    case 'branchCleanup':
+      return <BranchCleanupDialog key={key} repoId={current.repoId} onClose={close} />;
   }
 }
