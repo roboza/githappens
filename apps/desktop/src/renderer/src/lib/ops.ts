@@ -3,7 +3,7 @@ import type { GitErrorCode, RepoId, SerializedGitError } from '@githappens/git/t
 
 import { confirm } from '../components/Dialogs';
 import { useRepoUiStore } from '../stores/repo-ui';
-import { useToastStore, type ToastDetails } from '../stores/toasts';
+import { useToastStore, type ToastAction, type ToastDetails } from '../stores/toasts';
 import { invoke, IpcError } from './api';
 import { lockDialogText } from './lock-dialog';
 
@@ -20,6 +20,8 @@ export const isConflict = (e: unknown): boolean => e instanceof IpcError && CONF
 export interface RunOpOptions {
   /** Toast on success (e.g. "Pushed main to origin"). */
   successToast?: string | ((r: OpResult) => string);
+  /** Buttons on the success toast (e.g. Undo). */
+  successActions?: ToastAction[];
   /** Error codes the caller handles itself (re-thrown without a toast). */
   handled?: GitErrorCode[];
 }
@@ -39,7 +41,14 @@ export async function runOp(
       const r = await invoke('git:op:run', { repoId, op });
       if (o.successToast) {
         const title = typeof o.successToast === 'function' ? o.successToast(r) : o.successToast;
-        useToastStore.getState().push({ kind: 'success', title, body: r.warnings?.join('\n') });
+        useToastStore.getState().push({
+          kind: 'success',
+          title,
+          body: r.warnings?.join('\n'),
+          actions: o.successActions,
+          // long enough to reach an Undo
+          ...(o.successActions?.length ? { timeoutMs: 10_000 } : {}),
+        });
       } else if (r.warnings?.length) {
         useToastStore
           .getState()

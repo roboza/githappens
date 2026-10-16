@@ -80,7 +80,12 @@ export type GitOperation =
   | { type: 'branch.rename'; from: string; to: string }
   | {
       type: 'branch.delete';
-      branches: { name: string; deleteRemote?: { remote: string; remoteBranch: string } }[];
+      branches: {
+        name: string;
+        deleteRemote?: { remote: string; remoteBranch: string };
+        /** Skip (with a warning) when the tip is no longer this sha (branch cleanup, spec 05 §6.13). */
+        expectedSha?: string;
+      }[];
       force: boolean;
     }
   | { type: 'branch.setUpstream'; localBranch: string; upstream: string | null }

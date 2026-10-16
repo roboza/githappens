@@ -241,6 +241,7 @@ export const INVOKE_CHANNELS = [
   'graph:search',
   'git:checkout:preflight',
   'git:branch:validateName',
+  'git:branch:cleanupScan',
   'git:commit:headMessage',
   'git:undo:peek',
   'git:conflict:state',

@@ -255,6 +255,37 @@ export interface RefInfo {
   creatorDate?: number;
 }
 
+// ---- branch cleanup (spec 05 §6.13) ----
+
+/**
+ * Why a local branch is a cleanup candidate. `merged` / `squash-merged` / `rebase-merged` mean its work is
+ * already in the base branch; `upstream-gone` means the remote branch was deleted but the work was not
+ * found in the base (e.g. a PR closed without merging).
+ */
+export type BranchCleanupReason = 'merged' | 'squash-merged' | 'rebase-merged' | 'upstream-gone';
+
+export interface BranchCleanupCandidate {
+  name: string; // feature/x
+  sha: Sha; // tip at scan time; the delete is skipped if it moved
+  reason: BranchCleanupReason;
+  upstream?: string; // origin/feature/x
+  upstreamGone: boolean;
+  /** Commits on the branch that are not ancestors of the base (0 for `merged`). */
+  aheadOfBase: number;
+  committerDate: number; // unix seconds of the tip
+  authorName: string;
+  subject: string;
+}
+
+export interface BranchCleanupScan {
+  /** Short name of the branch compared against (`origin/main`); null when none could be found. */
+  base: string | null;
+  baseSha: Sha | null;
+  candidates: BranchCleanupCandidate[];
+  /** Local branches never offered: current, checked out in a worktree, the base and its local twin, main/master/develop. */
+  protectedBranches: string[];
+}
+
 // ---- diff ----
 
 export interface FileDiff {

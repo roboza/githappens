@@ -34,6 +34,7 @@ import { describeAutoFetch, resumeAutoFetch, useAutoFetchState } from '../notifi
 import { useKeybindingLabel } from '../commands/keybindings-store';
 import { useTabsStore } from '../stores/tabs';
 import { lfsMenuItems } from '../views/lfs/lfs-actions';
+import { openBranchCleanup } from '../views/remotes/dialog-store';
 import { SparseToolbarButton } from '../views/sparse/SparseCheckout';
 import { lfsInUse } from '../views/lfs/lfs-model';
 import { BranchSwitcher, LaunchpadButton, RepoSwitcher, WorkspacesButton } from './Switchers';
@@ -267,6 +268,13 @@ export function Toolbar({ repoId, info, onSearch }: { repoId: RepoId; info: Repo
           busy={running(['branch.create'])}
           title={withKey('Create branch', branchKey)}
           onClick={() => void createBranch(repoId)}
+          onMenu={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            showMenu(r.left, r.bottom + 2, [
+              { label: 'Create branch…', shortcut: branchKey, onSelect: () => void createBranch(repoId) },
+              { label: 'Clean up branches…', onSelect: () => openBranchCleanup(repoId) },
+            ]);
+          }}
         />
         <ToolButton
           icon={<Archive size={17} />}
