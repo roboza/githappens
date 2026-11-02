@@ -171,12 +171,12 @@ describe('UpdaterService', () => {
   it('uses manual mode with a download link on Linux deb/rpm (no APPIMAGE)', async () => {
     const t = make({ platform: 'linux', env: {} });
     expect(t.svc.current.state).toBe('manual');
-    expect(t.svc.current.downloadUrl).toBe('https://github.com/roboza/githappens/releases/latest');
+    expect(t.svc.current.downloadUrl).toBe('https://github.com/roboza/githappens/releases');
     t.updater.checkImpl = async () => void t.updater.emit('update-available', { version: '0.2.0' });
     const st = await t.svc.check();
     expect(t.updater.autoDownload).toBe(false);
     expect(st).toMatchObject({ state: 'manual', version: '0.2.0' });
-    expect(st.downloadUrl).toBe('https://github.com/roboza/githappens/releases/latest');
+    expect(st.downloadUrl).toBe('https://github.com/roboza/githappens/releases');
     t.updater.emit('error', new Error('x'));
     expect(t.svc.current.state).toBe('manual');
     await t.svc.installAndRestart();

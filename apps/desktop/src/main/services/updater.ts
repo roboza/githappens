@@ -13,7 +13,7 @@ export const RELEASES_REPO = { owner: 'roboza', repo: 'githappens' } as const;
  * "download the new version" link. The update feed itself is the github provider in electron-builder.yml
  * `publish`, baked into the app as app-update.yml.
  */
-export const RELEASES_URL = `https://github.com/${RELEASES_REPO.owner}/${RELEASES_REPO.repo}/releases/latest`;
+export const RELEASES_URL = `https://github.com/${RELEASES_REPO.owner}/${RELEASES_REPO.repo}/releases`;
 export const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 
 /** The subset of electron-updater's `AppUpdater` we use — a fake implements it in tests. */
