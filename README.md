@@ -5,6 +5,7 @@
 [![CI](https://github.com/roboza/githappens/actions/workflows/ci.yml/badge.svg)](https://github.com/roboza/githappens/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/roboza/githappens?include_prereleases&label=release)](https://github.com/roboza/githappens/releases)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Buy me a coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/roboza)
 
 A cross-platform desktop Git client built around a fast, interactive commit graph. Electron, React and
 TypeScript on the outside, the real Git command line doing the work underneath.
@@ -23,6 +24,7 @@ TypeScript on the outside, the real Git command line doing the work underneath.
 - [Cloud features (optional)](#cloud-features-optional)
 - [Project layout](#project-layout)
 - [Contributing](#contributing)
+- [Support](#support)
 - [License](#license)
 
 ## Features
@@ -243,6 +245,12 @@ Issues and pull requests are welcome on [GitHub](https://github.com/roboza/githa
    `## [Unreleased]` in [`CHANGELOG.md`](apps/desktop/CHANGELOG.md).
 
 CI must pass on all three operating systems before merging.
+
+## Support
+
+GitHappens is free and open source. If it saves you time, you can
+[buy me a coffee](https://buymeacoffee.com/roboza). Starring the repo and filing good bug reports help
+too.
 
 ## License
 
