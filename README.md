@@ -142,8 +142,8 @@ repo, finds its bundled Git and runs a terminal), then publishes a GitHub releas
 | **Nightly** (`nightly.yml`) | 03:00 UTC daily if `main` changed; or Actions → Nightly → Run workflow    | `X.Y.Z-preview.YYYYMMDD` prerelease, Preview channel |
 | **Release** (`release.yml`) | Push a tag `vX.Y.Z` matching `apps/desktop/package.json`; or Run workflow | `X.Y.Z` release marked latest, Stable channel        |
 
-Asset names carry no version, so the newest stable build always has the same URL, e.g.
-`https://github.com/roboza/githappens/releases/latest/download/GitHappens-Setup-x64.exe`. See
+Downloads are listed at [github.com/roboza/githappens/releases](https://github.com/roboza/githappens/releases);
+the website and the app link there. Asset names carry no version. See
 [docs/releases.md](docs/releases.md) for file names, channels and the pipeline.
 
 To cut a release: bump `version` in `apps/desktop/package.json`, add a section to

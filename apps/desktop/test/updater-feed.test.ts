@@ -375,7 +375,7 @@ describe('update feed (real electron-updater + local generic feed)', () => {
     feed.slow = false;
     const { updater } = realUpdater('deb');
     const { svc, statuses } = service(updater, { platform: 'linux', env: {} });
-    expect(RELEASES_URL).toBe('https://github.com/roboza/githappens/releases/latest');
+    expect(RELEASES_URL).toBe('https://github.com/roboza/githappens/releases');
     expect(svc.current).toMatchObject({ state: 'manual', downloadUrl: RELEASES_URL });
     await svc.check();
     expect(svc.current).toMatchObject({ state: 'manual', version: STABLE, downloadUrl: RELEASES_URL });

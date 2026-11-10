@@ -331,7 +331,7 @@ describe('GitHub Releases feed (electron-builder.yml publish + release.yml)', ()
     });
     // The app's own references (deb/rpm download link) point at the same repository.
     expect(RELEASES_REPO).toEqual({ owner: cfg.publish.owner, repo: cfg.publish.repo });
-    expect(RELEASES_URL).toBe('https://github.com/roboza/githappens/releases/latest');
+    expect(RELEASES_URL).toBe('https://github.com/roboza/githappens/releases');
     // No channel in the file: local builds write latest*.yml, CI passes the channel per version.
     expect(cfg.publish.channel).toBeUndefined();
   });
@@ -387,24 +387,14 @@ describe('GitHub Releases feed (electron-builder.yml publish + release.yml)', ()
     for (const n of names) expect(n).toMatch(/^[\w.-]+$/);
   });
 
-  it('the website download buttons use /releases/latest/download/<fixed name>', () => {
+  it('the website download buttons all link the releases page', () => {
     const html = fs.readFileSync(path.join(repoRoot, 'website', 'index.html'), 'utf8');
-    const links = [...html.matchAll(/href="(https:\/\/github\.com\/roboza\/githappens\/releases\/[^"]+)"/g)]
-      .map((m) => m[1]!)
-      .filter((u) => u.includes('/download/'));
-    expect(links.sort()).toEqual(
-      [
-        'GitHappens-Setup-x64.exe',
-        'GitHappens-mac-arm64.dmg',
-        'GitHappens-mac-x64.dmg',
-        'GitHappens-linux-x86_64.AppImage',
-        'GitHappens-linux-amd64.deb',
-        'GitHappens-linux-x86_64.rpm',
-        'GitHappens-linux-x64.tar.gz',
-      ]
-        .map((n) => `https://github.com/roboza/githappens/releases/latest/download/${n}`)
-        .sort(),
-    );
+    // /releases/latest skips prereleases, so it 404s while only nightlies exist: link the list instead.
+    const links = [
+      ...html.matchAll(/href="(https:\/\/github\.com\/roboza\/githappens\/releases[^"]*)"/g),
+    ].map((m) => m[1]!);
+    expect(links.length).toBeGreaterThanOrEqual(7);
+    for (const u of links) expect(u).toBe('https://github.com/roboza/githappens/releases');
   });
 
   it('every workflow file parses', () => {

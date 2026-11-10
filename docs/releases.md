@@ -2,9 +2,9 @@
 
 Installers and the auto-update feed are hosted on **GitHub Releases** of
 [`roboza/githappens`](https://github.com/roboza/githappens/releases). The website
-([githappens.dev](https://githappens.dev/#download)) links the newest stable files through
-`https://github.com/roboza/githappens/releases/latest/download/<file>`, which works because every
-release uses the same, version-less file names.
+([githappens.dev](https://githappens.dev/#download)) download buttons all link the releases page,
+`https://github.com/roboza/githappens/releases`, which lists stable releases and nightly prereleases.
+Every release uses the same, version-less file names.
 
 > **While the repository is private**, release assets are only visible to signed-in users with access
 > to the repository. The website buttons return 404 for everyone else, and installed apps can't check
@@ -34,7 +34,8 @@ and the arch spelling is whatever electron-builder uses for that format (`x86_64
 `arm64`/`aarch64`). arm64 Windows and Linux files only exist when the `GH_ARM_RUNNERS` repository
 variable enables those runners.
 
-Stable download links (what the website uses):
+Direct stable download links. These only work once a stable (non-prerelease) release exists, which
+is why the website links the releases page instead:
 
 | File                | URL                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------ |
@@ -74,7 +75,7 @@ sets it up per channel:
   than the installed preview.
 
 deb/rpm/tar.gz installs can't update themselves. When a new version is out, the app links
-`https://github.com/roboza/githappens/releases/latest`, which lists every file.
+`https://github.com/roboza/githappens/releases`, which lists every release and its files.
 
 **Differential updates** (Windows installer, macOS zip, AppImage) still work with version-less names.
 electron-updater downloads the new `<file>.blockmap` from the new release and finds the installed
